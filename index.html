@@ -346,6 +346,14 @@ h1,.h1{font-family:'Manrope';font-weight:800;font-size:21px;margin:2px 0 4px;let
 .sig-canvas{width:100%;height:100%;display:block;touch-action:none;cursor:crosshair;}
 .sig-placeholder{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#C4CBD6;font-size:13px;font-weight:600;pointer-events:none;margin:0;}
 
+.progress-track{height:8px;border-radius:5px;background:#EEF0F3;overflow:hidden;}
+.progress-fill{height:100%;border-radius:5px;background:var(--accent);transition:width .2s;}
+.pill-tabs{display:flex;background:#F3F5F8;border-radius:14px;padding:4px;gap:4px;}
+.pill-tabs button{flex:1;border:0;background:transparent;padding:11px 8px;border-radius:11px;font-family:'Inter';font-weight:700;font-size:13.5px;color:#6B7280;cursor:pointer;}
+.pill-tabs button.active{background:#171A21;color:#fff;}
+.lb-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(155deg,#5B7FEE,#7C5CEE);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:15px;flex:0 0 auto;}
+.lb-rank{width:24px;text-align:center;font-weight:800;color:#6B7280;flex:0 0 auto;font-size:13px;}
+
 .otp-row{display:flex;gap:8px;margin:18px 0 8px;}
 .otp-box{
   width:44px;height:52px;border:1.5px solid #E4E7EC;border-radius:12px;
@@ -505,6 +513,8 @@ const ICONS = {
   signature: `<svg width="20" height="20" viewBox="0 0 256 256" fill="currentColor"><path d="M232,168H63.86c2.66-5.24,5.33-10.63,8-16.11,15,1.65,32.58-8.78,52.66-31.14,5,13.46,14.45,30.93,30.58,31.25,9.06.18,18.11-5.2,27.42-16.37C189.31,143.75,203.3,152,232,152a8,8,0,0,0,0-16c-30.43,0-39.43-10.45-40-16.11a7.67,7.67,0,0,0-5.46-7.75,8.14,8.14,0,0,0-9.25,3.49c-12.07,18.54-19.38,20.43-21.92,20.37-8.26-.16-16.66-19.52-19.54-33.42a8,8,0,0,0-14.09-3.37C101.54,124.55,88,133.08,79.57,135.29,88.06,116.42,94.4,99.85,98.46,85.9c6.82-23.44,7.32-39.83,1.51-50.1-3-5.38-9.34-11.8-22.06-11.8C61.85,24,49.18,39.18,43.14,65.65c-3.59,15.71-4.18,33.21-1.62,48s7.87,25.55,15.59,31.94c-3.73,7.72-7.53,15.26-11.23,22.41H24a8,8,0,0,0,0,16H37.41c-11.32,21-20.12,35.64-20.26,35.88a8,8,0,1,0,13.71,8.24c.15-.26,11.27-18.79,24.7-44.12H232a8,8,0,0,0,0-16ZM58.74,69.21C62.72,51.74,70.43,40,77.91,40c5.33,0,7.1,1.86,8.13,3.67,3,5.33,6.52,24.19-21.66,86.39C56.12,118.78,53.31,93,58.74,69.21Z"/></svg>`,
   undo: `<svg width="17" height="17" viewBox="0 0 256 256" fill="currentColor"><path d="M232,144a64.07,64.07,0,0,1-64,64H80a8,8,0,0,1,0-16h88a48,48,0,0,0,0-96H51.31l34.35,34.34a8,8,0,0,1-11.32,11.32l-48-48a8,8,0,0,1,0-11.32l48-48A8,8,0,0,1,85.66,45.66L51.31,80H168A64.07,64.07,0,0,1,232,144Z"/></svg>`,
   redo: `<svg width="17" height="17" viewBox="0 0 256 256" fill="currentColor"><path d="M170.34,130.34,204.69,96H88a48,48,0,0,0,0,96h88a8,8,0,0,1,0,16H88A64,64,0,0,1,88,80H204.69L170.34,45.66a8,8,0,0,1,11.32-11.32l48,48a8,8,0,0,1,0,11.32l-48,48a8,8,0,0,1-11.32-11.32Z"/></svg>`,
+  trophy: `<svg width="19" height="19" viewBox="0 0 256 256" fill="currentColor"><path d="M232,64H208V48a8,8,0,0,0-8-8H56a8,8,0,0,0-8,8V64H24A16,16,0,0,0,8,80V96a40,40,0,0,0,40,40h3.65A80.13,80.13,0,0,0,120,191.61V216H96a8,8,0,0,0,0,16h64a8,8,0,0,0,0-16H136V191.58c31.94-3.23,58.44-25.64,68.08-55.58H208a40,40,0,0,0,40-40V80A16,16,0,0,0,232,64ZM48,120A24,24,0,0,1,24,96V80H48v32q0,4,.39,8Zm144-8.9c0,35.52-29,64.64-64,64.9a64,64,0,0,1-64-64V56H192ZM232,96a24,24,0,0,1-24,24h-.5a81.81,81.81,0,0,0,.5-8.9V80h24Z"/></svg>`,
+  medal: `<svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M216,96A88,88,0,1,0,72,163.83V240a8,8,0,0,0,11.58,7.16L128,225l44.43,22.21A8.07,8.07,0,0,0,176,248a8,8,0,0,0,8-8V163.83A87.85,87.85,0,0,0,216,96ZM56,96a72,72,0,1,1,72,72A72.08,72.08,0,0,1,56,96ZM168,227.06l-36.43-18.21a8,8,0,0,0-7.16,0L88,227.06V174.37a87.89,87.89,0,0,0,80,0ZM128,152A56,56,0,1,0,72,96,56.06,56.06,0,0,0,128,152Zm0-96A40,40,0,1,1,88,96,40,40,0,0,1,128,56Z"/></svg>`,
 };
 
 function fmtINR(n){ return '₹ ' + Number(n).toLocaleString('en-IN'); }
@@ -584,6 +594,27 @@ const NOTIFS_TRACKED = [
 ];
 const TRACK_STEPS = ['Request sent','Team notified','Issue resolved'];
 const freshNotifFeed = () => [...NOTIFS, ...NOTIFS_TRACKED].map(n=>({...n}));
+
+/* ---------------- Gamification ---------------- */
+const GAMIFICATION_LEVEL = { name:'Bronze', points:230, nextLevelAt:500 };
+const ACHIEVEMENTS = [
+  { points:10, title:'Complete 5 trips', current:1, target:5 },
+  { points:10, title:'Complete 3 trips on time', current:1, target:3 },
+  { points:10, title:'Complete 10 trips', current:1, target:10 },
+  { points:10, title:'Complete 6 trips on time', current:1, target:6 },
+  { points:10, title:'Complete 15 trips', current:1, target:15 },
+  { points:10, title:'Complete 9 trips on time', current:1, target:9 },
+];
+const freshAchievements = () => ACHIEVEMENTS.map(a=>({...a, claimed:false}));
+const LEADERBOARD = [
+  { rank:1, name:'Rahul Sharma', tier:'Gold', points:1250 },
+  { rank:2, name:'Amit Yadav', tier:'Gold', points:980 },
+  { rank:3, name:'Suresh Patil', tier:'Gold', points:760 },
+  { rank:4, name:'Karan Singh', tier:'Gold', points:620 },
+  { rank:5, name:'Vikram Das', tier:'Gold', points:560 },
+  { rank:6, name:'Priya Mehta', tier:'Silver', points:520 },
+  { rank:12, name:`${DRIVER.name} (You)`, tier:'Bronze', points:GAMIFICATION_LEVEL.points, isMe:true },
+];
 
 const START_CHECKLIST = [
   {icon:'car', title:'Vehicle Readings', subtitle:'Capture the current odometer reading before starting the trip.', fields:[
@@ -667,7 +698,9 @@ const initialState = () => ({
   detailTripId:null,       // which trip the Trip Details page is showing
   detailsFromView:'available', // which tripsView to return to on back
   notificationsOpen:false, // full-page Notifications, pushed on top of whatever tab is active
-  fullPage:null,           // sos | report | contact — full-page overlays pushed on top of whatever tab is active
+  fullPage:null,           // sos | report | contact | gamification — full-page overlays pushed on top of whatever tab is active
+  gamificationTab:'achievements', // achievements | leaderboard — which tab the Gamification module is showing
+  achievements: freshAchievements(),
   profileSub:null,
   dlFront:false,
   dlBack:false,
@@ -701,7 +734,10 @@ function addNotif(item){
 function AppHeader(){
   return `<div class="app-header">
     <div class="go-logo"><span class="g">Go</span>Bhola</div>
-    <div class="icon-btn" onclick="openNotifications()">${ICONS.bell}<span class="badge"></span></div>
+    <div class="row gap8">
+      <div class="icon-btn" onclick="openFullPage('gamification')">${ICONS.trophy}</div>
+      <div class="icon-btn" onclick="openNotifications()">${ICONS.bell}<span class="badge"></span></div>
+    </div>
   </div>`;
 }
 function BackHeader(title, onBack){
@@ -1624,7 +1660,7 @@ function ModalRoot(){
   };
   return map[S.modal] ? map[S.modal]() : '';
 }
-const FULL_PAGE_MAP = { sos: screenSos, report: screenReport, contact: screenContact };
+const FULL_PAGE_MAP = { sos: screenSos, report: screenReport, contact: screenContact, gamification: screenGamification };
 
 const VERIFY_STEPS_TEXT = [
   'You will receive a call from our team to confirm your application.',
@@ -1918,6 +1954,99 @@ function screenContact(){
   </div></div>`;
 }
 
+function LevelBadge(size){
+  return `<div style="position:relative;width:${size}px;height:${size}px;flex:0 0 auto;">
+    <svg viewBox="0 0 100 100" width="${size}" height="${size}">
+      <defs><linearGradient id="bronzeGrad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#D08A4C"/><stop offset="100%" stop-color="#8B4A26"/>
+      </linearGradient></defs>
+      <polygon points="32,4 68,4 96,50 68,96 32,96 4,50" fill="url(#bronzeGrad)" stroke="#6B3A1E" stroke-width="2.5"/>
+    </svg>
+    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;transform:scale(.8);">${ICONS.truck}</div>
+  </div>`;
+}
+function GamificationLevelCard(){
+  const g = GAMIFICATION_LEVEL;
+  const pct = Math.min(100, Math.round(g.points / g.nextLevelAt * 100));
+  return `<div class="card row gap12" style="align-items:center;">
+    ${LevelBadge(56)}
+    <div style="flex:1;min-width:0;">
+      <p class="tiny muted" style="margin:0;">Your Level</p>
+      <p style="font-weight:800;font-size:17px;margin:1px 0 8px;">${g.name}</p>
+      <div class="progress-track"><div class="progress-fill" style="width:${pct}%;"></div></div>
+      <div class="row between" style="margin-top:6px;">
+        <span class="tiny muted">${g.nextLevelAt-g.points} points to next level</span>
+        <span class="tiny" style="font-weight:700;">${g.points}/${g.nextLevelAt}</span>
+      </div>
+    </div>
+  </div>`;
+}
+function AchievementRow(a, index){
+  const pct = Math.min(100, Math.round(a.current / a.target * 100));
+  return `<div class="card row gap12" style="align-items:center;">
+    <div style="text-align:center;flex:0 0 auto;width:40px;">
+      <p style="margin:0;font-weight:800;color:var(--accent-dark);font-size:15px;">${a.points}</p>
+      <p class="tiny muted" style="margin:0;">Points</p>
+    </div>
+    <div style="flex:1;min-width:0;">
+      <p style="margin:0 0 6px;font-weight:700;font-size:13.5px;">${a.title}</p>
+      <div class="row gap8" style="align-items:center;">
+        <div class="progress-track" style="flex:1;"><div class="progress-fill" style="width:${pct}%;"></div></div>
+        <span class="tiny muted" style="flex:0 0 auto;">${a.claimed?a.target:a.current}/${a.target}</span>
+      </div>
+    </div>
+    ${a.claimed
+      ? `<button class="btn btn-sm" style="width:auto;flex:0 0 auto;background:var(--accent-soft);color:var(--accent-dark);" disabled>Claimed</button>`
+      : `<button class="btn btn-primary btn-sm" style="width:auto;flex:0 0 auto;" onclick="claimAchievement(${index})">Claim</button>`}
+  </div>`;
+}
+function screenGamificationAchievements(){
+  const unclaimed = S.achievements.map((a,i)=>({a,i})).filter(x=>!x.a.claimed);
+  const claimed = S.achievements.map((a,i)=>({a,i})).filter(x=>x.a.claimed);
+  return `
+    <div class="stack">${unclaimed.map(({a,i})=>AchievementRow(a,i)).join('')}</div>
+    ${claimed.length ? `
+      <p class="tiny muted" style="text-align:center;font-weight:700;margin:18px 0 8px;">Claimed Achievements</p>
+      <div class="stack">${claimed.map(({a,i})=>AchievementRow(a,i)).join('')}</div>
+    ` : ''}
+  `;
+}
+function LeaderboardRow(row){
+  const medalColor = row.rank===1 ? '#F0A727' : row.rank===2 ? '#9CA3AF' : row.rank===3 ? '#B5651D' : null;
+  const initials = row.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  return `<div class="card row gap10" style="align-items:center;${row.isMe?'border-color:var(--accent);background:var(--accent-soft);':''}">
+    ${medalColor
+      ? `<div style="color:${medalColor};flex:0 0 auto;width:24px;text-align:center;">${ICONS.medal}</div>`
+      : `<div class="lb-rank">${row.rank}</div>`}
+    <div class="lb-avatar">${initials}</div>
+    <div style="flex:1;min-width:0;">
+      <p style="margin:0;font-weight:700;font-size:13.5px;">${row.name}</p>
+      <p class="tiny muted" style="margin:1px 0 0;">${row.tier}</p>
+    </div>
+    <p style="margin:0;font-weight:800;font-size:13.5px;flex:0 0 auto;">${Number(row.points).toLocaleString('en-IN')} Points</p>
+  </div>`;
+}
+function screenGamificationLeaderboard(){
+  return `<div class="stack">${LEADERBOARD.map(LeaderboardRow).join('')}</div>`;
+}
+function screenGamification(){
+  return `
+  ${BackHeader('Gamification', 'closeFullPage()')}
+  <div class="screen-scroll"><div class="screen-pad">
+    ${GamificationLevelCard()}
+    <div class="pill-tabs" style="margin:16px 0;">
+      <button class="${S.gamificationTab==='achievements'?'active':''}" onclick="set({gamificationTab:'achievements'})">Achievements</button>
+      <button class="${S.gamificationTab==='leaderboard'?'active':''}" onclick="set({gamificationTab:'leaderboard'})">Leaderboard</button>
+    </div>
+    ${S.gamificationTab==='achievements' ? screenGamificationAchievements() : screenGamificationLeaderboard()}
+  </div></div>`;
+}
+function claimAchievement(index){
+  S.achievements[index] = {...S.achievements[index], claimed:true};
+  showToast(`+${S.achievements[index].points} points claimed!`);
+  render();
+}
+
 function screenNotifications(){
   return `
   ${BackHeader('Notifications', 'closeNotifications()')}
@@ -2144,6 +2273,15 @@ function renderPanel(){
         ${NavBtn('Contact — Hub-to-hub leg', S.fullPage==='contact' && S.legIndex===1, "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'inProgress',legIndex:1}); openFullPage('contact')", 'No Trip Contacts card')}
         ${NavBtn('Contact — Delivery leg', S.fullPage==='contact' && S.legIndex===2, "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'inProgress',legIndex:2}); openFullPage('contact')", 'Shows Delivery Contact card')}
         ${NavBtn('Notifications', S.notificationsOpen, "openNotifications()")}
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <p class="panel-eyebrow">Gamification</p>
+      <div class="nav-grid">
+        ${NavBtn('Achievements tab', S.fullPage==='gamification' && S.gamificationTab==='achievements', "openFullPage('gamification'); set({gamificationTab:'achievements'})", 'Level card · claimable + claimed achievements')}
+        ${NavBtn('Leaderboard tab', S.fullPage==='gamification' && S.gamificationTab==='leaderboard', "openFullPage('gamification'); set({gamificationTab:'leaderboard'})", 'Top drivers · your own rank highlighted')}
+        ${NavBtn('Reset achievements', false, "set({achievements:freshAchievements()}); showToast('Achievements reset')", 'Un-claim every achievement for a fresh demo')}
       </div>
     </div>
 
