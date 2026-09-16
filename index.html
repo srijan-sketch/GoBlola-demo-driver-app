@@ -253,6 +253,7 @@ h1,h2,h3,.font-display{font-family:'Manrope',Inter,sans-serif;}
   position:absolute;top:-2px;right:-2px;width:9px;height:9px;border-radius:50%;
   background:var(--danger);border:2px solid #fff;
 }
+.icon-btn:disabled{opacity:.4;cursor:not-allowed;}
 .back-header{
   display:flex;align-items:center;padding:10px 12px 10px;position:relative;
 }
@@ -340,6 +341,10 @@ h1,.h1{font-family:'Manrope';font-weight:800;font-size:21px;margin:2px 0 4px;let
 .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0;}
 .toggle-row .lbl{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
 .toggle-row .lbl p{margin:0;font-size:13.5px;font-weight:600;color:#374151;}
+
+.sig-pad-wrap{position:relative;height:220px;border:1.3px solid #E4E7EC;border-radius:14px;overflow:hidden;background:#fff;margin-top:10px;}
+.sig-canvas{width:100%;height:100%;display:block;touch-action:none;cursor:crosshair;}
+.sig-placeholder{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#C4CBD6;font-size:13px;font-weight:600;pointer-events:none;margin:0;}
 
 .otp-row{display:flex;gap:8px;margin:18px 0 8px;}
 .otp-box{
@@ -497,6 +502,9 @@ const ICONS = {
   gasPump: `<svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M241,69.66,221.66,50.34a8,8,0,0,0-11.32,11.32L229.66,81A8,8,0,0,1,232,86.63V168a8,8,0,0,1-16,0V128a24,24,0,0,0-24-24H176V56a24,24,0,0,0-24-24H72A24,24,0,0,0,48,56V208H32a8,8,0,0,0,0,16H192a8,8,0,0,0,0-16H176V120h16a8,8,0,0,1,8,8v40a24,24,0,0,0,48,0V86.63A23.85,23.85,0,0,0,241,69.66ZM64,208V56a8,8,0,0,1,8-8h80a8,8,0,0,1,8,8V208Zm80-96a8,8,0,0,1-8,8H88a8,8,0,0,1,0-16h48A8,8,0,0,1,144,112Z"/></svg>`,
   thermometer: `<svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M212,56a28,28,0,1,0,28,28A28,28,0,0,0,212,56Zm0,40a12,12,0,1,1,12-12A12,12,0,0,1,212,96Zm-84,57V88a8,8,0,0,0-16,0v65a32,32,0,1,0,16,0Zm-8,47a16,16,0,1,1,16-16A16,16,0,0,1,120,200Zm40-66V48a40,40,0,0,0-80,0v86a64,64,0,1,0,80,0Zm-40,98a48,48,0,0,1-27.42-87.4A8,8,0,0,0,96,138V48a24,24,0,0,1,48,0v90a8,8,0,0,0,3.42,6.56A48,48,0,0,1,120,232Z"/></svg>`,
   target: `<svg width="20" height="20" viewBox="0 0 256 256" fill="currentColor"><path d="M221.87,83.16A104.1,104.1,0,1,1,195.67,49l22.67-22.68a8,8,0,0,1,11.32,11.32l-96,96a8,8,0,0,1-11.32-11.32l27.72-27.72a40,40,0,1,0,17.87,31.09,8,8,0,1,1,16-.9,56,56,0,1,1-22.38-41.65L184.3,60.39a87.88,87.88,0,1,0,23.13,29.67,8,8,0,0,1,14.44-6.9Z"/></svg>`,
+  signature: `<svg width="20" height="20" viewBox="0 0 256 256" fill="currentColor"><path d="M232,168H63.86c2.66-5.24,5.33-10.63,8-16.11,15,1.65,32.58-8.78,52.66-31.14,5,13.46,14.45,30.93,30.58,31.25,9.06.18,18.11-5.2,27.42-16.37C189.31,143.75,203.3,152,232,152a8,8,0,0,0,0-16c-30.43,0-39.43-10.45-40-16.11a7.67,7.67,0,0,0-5.46-7.75,8.14,8.14,0,0,0-9.25,3.49c-12.07,18.54-19.38,20.43-21.92,20.37-8.26-.16-16.66-19.52-19.54-33.42a8,8,0,0,0-14.09-3.37C101.54,124.55,88,133.08,79.57,135.29,88.06,116.42,94.4,99.85,98.46,85.9c6.82-23.44,7.32-39.83,1.51-50.1-3-5.38-9.34-11.8-22.06-11.8C61.85,24,49.18,39.18,43.14,65.65c-3.59,15.71-4.18,33.21-1.62,48s7.87,25.55,15.59,31.94c-3.73,7.72-7.53,15.26-11.23,22.41H24a8,8,0,0,0,0,16H37.41c-11.32,21-20.12,35.64-20.26,35.88a8,8,0,1,0,13.71,8.24c.15-.26,11.27-18.79,24.7-44.12H232a8,8,0,0,0,0-16ZM58.74,69.21C62.72,51.74,70.43,40,77.91,40c5.33,0,7.1,1.86,8.13,3.67,3,5.33,6.52,24.19-21.66,86.39C56.12,118.78,53.31,93,58.74,69.21Z"/></svg>`,
+  undo: `<svg width="17" height="17" viewBox="0 0 256 256" fill="currentColor"><path d="M232,144a64.07,64.07,0,0,1-64,64H80a8,8,0,0,1,0-16h88a48,48,0,0,0,0-96H51.31l34.35,34.34a8,8,0,0,1-11.32,11.32l-48-48a8,8,0,0,1,0-11.32l48-48A8,8,0,0,1,85.66,45.66L51.31,80H168A64.07,64.07,0,0,1,232,144Z"/></svg>`,
+  redo: `<svg width="17" height="17" viewBox="0 0 256 256" fill="currentColor"><path d="M170.34,130.34,204.69,96H88a48,48,0,0,0,0,96h88a8,8,0,0,1,0,16H88A64,64,0,0,1,88,80H204.69L170.34,45.66a8,8,0,0,1,11.32-11.32l48,48a8,8,0,0,1,0,11.32l-48,48a8,8,0,0,1-11.32-11.32Z"/></svg>`,
 };
 
 function fmtINR(n){ return '₹ ' + Number(n).toLocaleString('en-IN'); }
@@ -617,7 +625,16 @@ const END_CHECKLIST = [
   {icon:'gauge', title:'Odometer Reading', body:'Record the closing odometer reading at the handover point.'},
   {icon:'wrench', title:'Vehicle Condition', body:'Note any new damage, warning lights or mechanical issues.'},
   {icon:'camera', title:'Proof of Handover', body:'Upload or capture dock handover photos (cargo condition, seal integrity, or signed LR copy).'},
-  {icon:'check', title:'Declaration', body:null},
+  {icon:'check', title:'Declaration', declaration:true},
+];
+// Checklist for ending a trip at its final (last-mile) destination
+const FINAL_END_CHECKLIST = [
+  {icon:'shield', title:'Delivery security OTP', otp:true, subtitle:'Enter the 6-digit OTP shared by the delivery receiver to confirm and end the trip.'},
+  {icon:'signature', title:'Receiver signature', signature:true, subtitle:'Recipient should sign inside the box below to acknowledge receipt of freight in sound condition.'},
+  {icon:'camera', title:'Proof of handover', subtitle:'Upload or capture dock handover photos (cargo condition, seal integrity, or signed LR copy).', fields:[
+    {key:'handoverPhoto', type:'photo', label:'Add photo (optional)'},
+  ]},
+  {icon:'check', title:'Declaration', declaration:true},
 ];
 // Shorter re-verification checklist reused at each hub handover (skips cargo weight + fluid levels)
 const SHORT_START_CHECKLIST = [START_CHECKLIST[0], START_CHECKLIST[3], START_CHECKLIST[4], START_CHECKLIST[5]];
@@ -633,7 +650,7 @@ const initialState = () => ({
   tripsView:'available',
   // none -> accepted -> preActive -> checklistStart -> startCelebrate -> inProgress
   //      -> (per hub leg: legEndChecklist -> legStartChecklist -> inProgress)
-  //      -> ending -> checklistEnd -> completed
+  //      -> ending -> checklistEnd -> tripEnded -> none
   tripPhase:'none',
   legIndex:0,
   activeTripId: AVAILABLE_TRIPS[0].id,
@@ -644,6 +661,9 @@ const initialState = () => ({
   declareStart:false,
   declareEnd:false,
   checklistData:{},        // answers for the field-based Start Trip Checklist (odometer, fuel level, tyre condition, yes/no rows, etc.)
+  deliveryOtp:'',          // 6-digit OTP entered on the final End Trip Checklist's "Delivery security OTP" step
+  signatureStrokes:[],     // recorded pen strokes for the "Receiver signature" step, as arrays of [x,y] points
+  signatureRedo:[],        // strokes popped by Undo, restorable by Redo
   detailTripId:null,       // which trip the Trip Details page is showing
   detailsFromView:'available', // which tripsView to return to on back
   notificationsOpen:false, // full-page Notifications, pushed on top of whatever tab is active
@@ -658,7 +678,7 @@ const initialState = () => ({
   notifFeed: freshNotifFeed(),
   reportType:'Road Block',
   everCertified:false,     // tracks whether the cert-complete celebration has already played
-  modal:null,              // certRequired | certCelebrate | otpStart | otpLeg | cancelTrip | endConfirm | sos | report | contact | notifications | logout | tripCompleted
+  modal:null,              // certRequired | certCelebrate | otpStart | otpLeg | cancelTrip | endConfirm | logout
   otpValue:'',
   toast:null,
   resendTimer:36,
@@ -1033,7 +1053,7 @@ function screenTripsUpcoming(){
 }
 
 function TripsTopTabs(){
-  const isActive = ['preActive','checklistStart','startCelebrate','inProgress','legEndChecklist','legStartChecklist','ending','checklistEnd'].includes(S.tripPhase);
+  const isActive = ['preActive','checklistStart','startCelebrate','inProgress','legEndChecklist','legStartChecklist','ending','checklistEnd','tripEnded'].includes(S.tripPhase);
   const upcomingCount = S.tripPhase==='accepted' ? 1 : 0;
   const tabs = isActive
     ? [{id:'active',label:'Active'},{id:'upcoming',label:'Upcoming',n:0},{id:'available',label:'Available',n:AVAILABLE_TRIPS.length}]
@@ -1141,6 +1161,19 @@ function screenTripsActive(){
     <div class="screen-pad"><button class="btn btn-primary" onclick="goActiveDriving()">Go to Active Trips</button></div>`;
   }
 
+  if(phase==='tripEnded'){
+    return `
+    <div class="screen-scroll"><div class="screen-pad" style="padding-top:90px;text-align:center;position:relative;">
+      <svg width="220" height="160" viewBox="0 0 220 160" style="position:absolute;top:20px;left:50%;transform:translateX(-50%);pointer-events:none;">
+        ${['#0E9F6E','#F0A727','#3B82F6','#E5484D','#7C5CEE'].map((c,i)=>`<rect x="${20+i*38+ (i%2?8:0)}" y="${10+ (i%3)*20}" width="7" height="12" fill="${c}" transform="rotate(${(i*37)%360} ${23+i*38} ${16+(i%3)*20})"/>`).join('')}
+      </svg>
+      <div style="width:88px;height:88px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 22px;position:relative;">${ICONS.check}</div>
+      <h1>Trip Ended!</h1>
+      <p class="muted small">You have completed your trip successfully.</p>
+    </div></div>
+    <div class="screen-pad"><button class="btn btn-primary" onclick="finishTripFlow()">Go to available trips</button></div>`;
+  }
+
   if(phase==='ending'){
     return `
     ${AppHeader()}
@@ -1159,7 +1192,7 @@ function screenTripsActive(){
           <div><p style="margin:0;font-weight:600;font-size:13px;">${leg.to.name}</p><p class="tiny muted" style="margin:1px 0 0;">${leg.to.addr}</p></div>
         </div>
         <p class="small" style="margin:0 0 12px;color:var(--accent-dark);font-weight:700;">${ICONS.compass} You have reached your destination</p>
-        <button class="btn btn-primary" onclick="beginFinalChecklist()">End Trip</button>
+        <button class="btn btn-primary" onclick="openModal('endConfirm')">End Trip</button>
       </div>
     </div></div>
     ${TabBar()}`;
@@ -1188,11 +1221,13 @@ function screenTripsActive(){
 }
 
 function ChecklistScreen(isStart){
-  const list = isStart ? (S.startKind==='short' ? SHORT_START_CHECKLIST : START_CHECKLIST) : END_CHECKLIST;
+  const list = isStart ? (S.startKind==='short' ? SHORT_START_CHECKLIST : START_CHECKLIST)
+                       : (S.endKind==='final' ? FINAL_END_CHECKLIST : END_CHECKLIST);
   const step = isStart ? S.startStep : S.endStep;
   const item = list[step];
-  const isDeclare = isStart ? !!item.declaration : step === list.length-1;
+  const isDeclare = !!item.declaration;
   const declared = isStart ? S.declareStart : S.declareEnd;
+  const declareBtnLabel = isStart ? 'Start Trip' : (S.endKind==='final' ? 'End Trip' : 'Submit');
   return `
   ${BackHeader(isStart?'Start Trip Checklists':'End Trip Checklists', isStart?'prevStartStep()':'prevEndStep()')}
   <div class="screen-scroll"><div class="screen-pad">
@@ -1206,30 +1241,63 @@ function ChecklistScreen(isStart){
       <p style="font-weight:800;font-size:16px;margin:0;">${item.title}</p>
       <p class="small muted" style="margin:0;">${step+1} / ${list.length}</p>
     </div>
-    ${isStart && item.subtitle ? `<p class="small muted" style="margin-top:2px;">${item.subtitle}</p>` : ''}
-    ${isDeclare ? `
-      <div class="info-banner green" style="margin:14px 0;">${ICONS.shield}
-        <span>I hereby confirm that I have inspected the vehicle, verified all the above details and found everything to be in order. I am fit to ${isStart?'start':'end'} this trip.</span>
-      </div>
-      <div class="field check"><input type="checkbox" id="declareBox" ${declared?'checked':''} onchange="toggleDeclare(${isStart})"><label for="declareBox" style="margin:0;">I agree to the above declaration</label></div>
-    ` : isStart ? `<div style="margin-top:14px;">${ChecklistFields(item.fields)}</div>` : `
-      <p class="small muted" style="margin-top:2px;">${item.body}</p>
-      ${item.icon==='camera' ? `
-        <div class="row gap10" style="margin-top:16px;">
-          <div class="card" style="flex:1;text-align:center;padding:26px 8px;border-style:dashed;color:#9CA3AF;">${ICONS.camera}<p class="tiny" style="margin-top:6px;font-weight:700;color:#374151;">Add Photo</p></div>
-          <div style="flex:1;border-radius:14px;overflow:hidden;position:relative;">
-            <svg viewBox="0 0 140 110" width="100%" style="display:block;"><rect width="140" height="110" fill="#3B4250"/><rect x="20" y="35" width="80" height="45" rx="4" fill="#EDEFF3"/><rect x="30" y="45" width="60" height="6" fill="#B7BFCC"/><rect x="30" y="56" width="40" height="6" fill="#B7BFCC"/></svg>
-          </div>
-        </div>` : `
-        <div class="card" style="margin-top:16px;text-align:center;color:#9CA3AF;padding:22px;">${ICONS[item.icon]}<p class="tiny" style="margin-top:8px;">Tap to confirm this check</p></div>`}
-    `}
+    ${item.subtitle ? `<p class="small muted" style="margin-top:2px;">${item.subtitle}</p>` : ''}
+    ${isDeclare ? DeclareBlock(isStart, declared) :
+      item.otp ? DeliveryOtpBlock() :
+      item.signature ? SignatureBlock() :
+      item.fields ? `<div style="margin-top:14px;">${ChecklistFields(item.fields)}</div>` :
+      LegacyChecklistBody(item)}
   </div></div>
   <div class="screen-pad">
     <div class="row gap10">
       <button class="btn btn-outline" style="flex:1;" onclick="${isStart?'prevStartStep()':'prevEndStep()'}">Back</button>
-      <button class="btn btn-primary" style="flex:1;" ${isDeclare && !declared ? 'disabled' : ''} onclick="${isStart?'nextStartStep()':'nextEndStep()'}">${isDeclare ? (isStart?'Start Trip':'Submit') : 'Next'}</button>
+      <button class="btn btn-primary" style="flex:1;" ${isDeclare && !declared ? 'disabled' : ''} onclick="${isStart?'nextStartStep()':'nextEndStep()'}">${isDeclare ? declareBtnLabel : 'Next'}</button>
     </div>
   </div>`;
+}
+function DeclareBlock(isStart, declared){
+  const trip = AVAILABLE_TRIPS.find(t=>t.id===S.activeTripId);
+  const text = (!isStart && S.endKind==='final')
+    ? `I verify that consignment <b>${S.activeTripId}</b> has been inspected, unbroken security seals logged, and custody handed over to <b>${(trip && trip.contact && trip.contact.name) || 'the receiver'}</b> (Receiver).`
+    : `I hereby confirm that I have inspected the vehicle, verified all the above details and found everything to be in order. I am fit to ${isStart?'start':'end'} this trip.`;
+  return `
+    <div class="info-banner green" style="margin:14px 0;">${ICONS.shield}<span>${text}</span></div>
+    <div class="field check"><input type="checkbox" id="declareBox" ${declared?'checked':''} onchange="toggleDeclare(${isStart})"><label for="declareBox" style="margin:0;">I agree to the above declaration</label></div>
+  `;
+}
+function DeliveryOtpBlock(){
+  const digits = S.deliveryOtp.padEnd(6,' ').split('');
+  return `
+    <div class="otp-row">
+      ${digits.map((d,i)=>`<div class="otp-box ${d.trim()?'filled':(i===S.deliveryOtp.length?'cursor':'')}">${d.trim()}</div>`).join('')}
+    </div>
+    <p class="small" style="cursor:pointer;color:var(--accent);font-weight:700;" onclick="set({deliveryOtp:'123456'})">Didn't receive OTP?</p>
+  `;
+}
+function SignatureBlock(){
+  return `
+    <div class="sig-pad-wrap">
+      <canvas id="sigCanvas" class="sig-canvas"></canvas>
+      ${S.signatureStrokes.length===0 ? '<p class="sig-placeholder">Draw signature here</p>' : ''}
+    </div>
+    <div class="row gap10" style="margin-top:10px;justify-content:center;">
+      <button type="button" class="icon-btn" style="width:38px;height:38px;" ${S.signatureStrokes.length===0?'disabled':''} onclick="undoSignature()">${ICONS.undo}</button>
+      <button type="button" class="icon-btn" style="width:38px;height:38px;" ${S.signatureRedo.length===0?'disabled':''} onclick="redoSignature()">${ICONS.redo}</button>
+    </div>
+  `;
+}
+function LegacyChecklistBody(item){
+  return `
+    <p class="small muted" style="margin-top:2px;">${item.body}</p>
+    ${item.icon==='camera' ? `
+      <div class="row gap10" style="margin-top:16px;">
+        <div class="card" style="flex:1;text-align:center;padding:26px 8px;border-style:dashed;color:#9CA3AF;">${ICONS.camera}<p class="tiny" style="margin-top:6px;font-weight:700;color:#374151;">Add Photo</p></div>
+        <div style="flex:1;border-radius:14px;overflow:hidden;position:relative;">
+          <svg viewBox="0 0 140 110" width="100%" style="display:block;"><rect width="140" height="110" fill="#3B4250"/><rect x="20" y="35" width="80" height="45" rx="4" fill="#EDEFF3"/><rect x="30" y="45" width="60" height="6" fill="#B7BFCC"/><rect x="30" y="56" width="40" height="6" fill="#B7BFCC"/></svg>
+        </div>
+      </div>` : `
+      <div class="card" style="margin-top:16px;text-align:center;color:#9CA3AF;padding:22px;">${ICONS[item.icon]}<p class="tiny" style="margin-top:8px;">Tap to confirm this check</p></div>`}
+  `;
 }
 function ChecklistFields(fields){
   return fields.map(ChecklistField).join('');
@@ -1299,7 +1367,7 @@ function nextEndStep(){
     set({tripPhase:'legStartChecklist', startKind:'short', startStep:0, declareStart:false, checklistData:{}});
     showToast('Handover complete — continuing to next leg.');
   } else {
-    openModal('endConfirm');
+    set({tripPhase:'tripEnded'});
   }
 }
 
@@ -1327,9 +1395,8 @@ function submitOtpLeg(){
   set({modal:null, tripPhase:'legEndChecklist', endKind:'leg', endStep:0, declareEnd:false});
 }
 function reachDestination(){ set({tripPhase:'ending'}); }
-function beginFinalChecklist(){ set({tripPhase:'checklistEnd', endKind:'final', endStep:0, declareEnd:false}); }
-function endTripConfirmed(){
-  set({modal:'tripCompleted', tripPhase:'completed'});
+function beginFinalChecklist(){
+  set({modal:null, tripPhase:'checklistEnd', endKind:'final', endStep:0, declareEnd:false, deliveryOtp:'', signatureStrokes:[], signatureRedo:[]});
 }
 function finishTripFlow(){
   set({modal:null, tripPhase:'none', tripsView:'available', legIndex:0, startStep:0, endStep:0});
@@ -1559,7 +1626,6 @@ function ModalRoot(){
     otpLeg: ()=>ModalOtp('Verify arrival','Enter the 6-digit OTP shared by the hub coordinator to confirm handover and continue.','submitOtpLeg()'),
     cancelTrip: ModalCancelTrip,
     endConfirm: ModalEndConfirm,
-    tripCompleted: ModalTripCompleted,
     logout: ModalLogout,
   };
   return map[S.modal] ? map[S.modal]() : '';
@@ -1756,30 +1822,17 @@ function ModalCancelTrip(){
 }
 
 function ModalEndConfirm(){
+  const trip = AVAILABLE_TRIPS.find(t=>t.id===S.activeTripId);
+  const contact = (trip && trip.contact) || {name:'Avilash Ghosh', title:'Manager', phone:'+91 98765 43210'};
   return `<div class="overlay" onclick="if(event.target===this) closeModal()"><div class="sheet">
     <div class="sheet-grabber"></div>
     <h2 style="text-align:center;font-size:16.5px;">End Trip?</h2>
     <p class="small muted" style="text-align:center;">Please confirm you've reached the destination and completed the handover to mark this trip as completed.</p>
     <div class="card row between" style="margin:14px 0 18px;">
-      <div><p style="font-weight:700;margin:0;font-size:13px;">Avilash Ghosh • Manager</p><p class="small muted" style="margin:2px 0 0;">+91 98765 43210</p></div>
-      <button class="btn btn-dark btn-sm" style="width:auto;">${ICONS.phoneIc} Call</button>
+      <div><p style="font-weight:700;margin:0;font-size:13px;">${contact.name} • ${contact.title}</p><p class="small muted" style="margin:2px 0 0;">${contact.phone}</p></div>
+      <button class="btn btn-dark btn-sm" style="width:auto;" onclick="showToast('Calling ${contact.name}…')">${ICONS.phoneIc} Call</button>
     </div>
-    <div class="slide-confirm" onclick="endTripConfirmed()"><div class="fill" style="width:100%"></div><div class="knob">›</div><div class="label">Slide to end trip</div></div>
-  </div></div>`;
-}
-
-function ModalTripCompleted(){
-  const trip = AVAILABLE_TRIPS.find(t=>t.id===S.activeTripId) || AVAILABLE_TRIPS[0];
-  return `<div class="overlay center" onclick="if(event.target===this) closeModal()"><div class="sheet pop" style="text-align:center;">
-    <div style="width:80px;height:80px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;margin:6px auto 16px;">${ICONS.check}</div>
-    <h2 style="margin:0 0 6px;">Trip Completed!</h2>
-    <p class="small muted" style="margin:0 0 16px;">Handover confirmed. Your earnings have been added to your account.</p>
-    <div class="card" style="text-align:left;margin-bottom:16px;">
-      <div class="row between small"><span class="muted">Trip ID</span><b>${trip.id}</b></div>
-      <div class="divider" style="margin:10px 0;"></div>
-      <div class="row between"><span class="small muted">You earned</span><b style="color:var(--accent-dark);font-size:18px;">${fmtINR(trip.earn)}</b></div>
-    </div>
-    <button class="btn btn-primary" onclick="finishTripFlow()">Done</button>
+    <div class="slide-confirm" onclick="beginFinalChecklist()"><div class="fill" style="width:100%"></div><div class="knob">›</div><div class="label">Slide to end trip</div></div>
   </div></div>`;
 }
 
@@ -1954,6 +2007,7 @@ function render(){
   `;
   renderPanel();
   renderTopbar();
+  paintSignaturePad();
 }
 
 function renderTopbar(){
@@ -2075,10 +2129,10 @@ function renderPanel(){
         ${NavBtn('10 · Leg-end checklist (4-step)', trip==='legEndChecklist', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'legEndChecklist',endKind:'leg',endStep:0,modal:null})", 'Closes out the leg just finished')}
         ${NavBtn('11 · Leg-start checklist (4-step)', trip==='legStartChecklist', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'legStartChecklist',startKind:'short',startStep:0,modal:null})", 'Shorter re-check before the next leg')}
         ${NavBtn('12 · Active — driving (leg 2/3)', trip==='inProgress' && S.legIndex>0, "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'inProgress',legIndex:1,modal:null})")}
-        ${NavBtn('13 · Reached destination', trip==='ending', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'ending',legIndex:LEGS.length-1,modal:null})", '"End Trip" tap button appears')}
-        ${NavBtn('14 · Final End Trip Checklist', trip==='checklistEnd', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'checklistEnd',endKind:'final',endStep:0,modal:null})", 'Odometer, condition, handover photo, declaration')}
-        ${NavBtn('15 · "End Trip?" slide confirm', S.modal==='endConfirm', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'checklistEnd',endKind:'final'}); openModal('endConfirm')", 'Slide to end · manager call')}
-        ${NavBtn('16 · Trip Completed summary', S.modal==='tripCompleted', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'completed'}); openModal('tripCompleted')", 'Earnings summary popup')}
+        ${NavBtn('13 · Reached destination', trip==='ending', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'ending',activeTripId:AVAILABLE_TRIPS[2].id,legIndex:LEGS.length-1,modal:null})", '"End Trip" tap button appears')}
+        ${NavBtn('14 · "End Trip?" slide confirm', S.modal==='endConfirm', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'ending',activeTripId:AVAILABLE_TRIPS[2].id,legIndex:LEGS.length-1}); openModal('endConfirm')", 'Slide to end · manager call · opens before the checklist')}
+        ${NavBtn('15 · Final End Trip Checklist (4-step)', trip==='checklistEnd', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'checklistEnd',endKind:'final',endStep:0,activeTripId:AVAILABLE_TRIPS[2].id,legIndex:LEGS.length-1,deliveryOtp:'',signatureStrokes:[],signatureRedo:[],declareEnd:false,modal:null})", 'Delivery OTP, receiver signature, handover photo, declaration')}
+        ${NavBtn('16 · "Trip Ended!" celebration', trip==='tripEnded', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'tripEnded',modal:null})", 'Confetti full-screen moment')}
         ${NavBtn('Cancel Trip sheet', S.modal==='cancelTrip', "set({screen:'home',tab:'trips',tripsView:'upcoming',tripPhase:'accepted'}); openModal('cancelTrip')", 'Slide-to-cancel · only before trip starts')}
         ${NavBtn('Upcoming — empty state', isHome && S.tab==='trips' && S.tripsView==='upcoming' && trip==='none', "set({screen:'home',tab:'trips',tripsView:'upcoming',tripPhase:'none',modal:null})")}
       </div>
@@ -2123,7 +2177,7 @@ function renderPanel(){
   `;
 }
 function tripLabel(p){
-  return {none:'No trip',accepted:'Accepted',preActive:'Pre-active',checklistStart:'Start checklist',startCelebrate:'Trip started!',inProgress:`Driving · leg ${S.legIndex+1}/${LEGS.length}`,legEndChecklist:'Leg-end checklist',legStartChecklist:'Leg-start checklist',ending:'Reached destination',checklistEnd:'End checklist',completed:'Completed'}[p]||p;
+  return {none:'No trip',accepted:'Accepted',preActive:'Pre-active',checklistStart:'Start checklist',startCelebrate:'Trip started!',inProgress:`Driving · leg ${S.legIndex+1}/${LEGS.length}`,legEndChecklist:'Leg-end checklist',legStartChecklist:'Leg-start checklist',ending:'Reached destination',checklistEnd:'End checklist',tripEnded:'Trip ended!'}[p]||p;
 }
 
 /* Drag the sheet-grabber handle down to dismiss a drawer, like a real bottom sheet. */
@@ -2159,6 +2213,74 @@ function tripLabel(p){
     } else {
       el.style.transform = '';
     }
+  });
+})();
+
+/* Receiver signature pad — freehand drawing on the End Trip Checklist's signature step. */
+function paintSignaturePad(){
+  const canvas = document.getElementById('sigCanvas');
+  if(!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+  const ctx = canvas.getContext('2d');
+  ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#171A21';
+  S.signatureStrokes.forEach(stroke=>{
+    if(stroke.length < 2) return;
+    ctx.beginPath();
+    ctx.moveTo(stroke[0][0], stroke[0][1]);
+    for(let i=1;i<stroke.length;i++) ctx.lineTo(stroke[i][0], stroke[i][1]);
+    ctx.stroke();
+  });
+}
+function undoSignature(){
+  if(S.signatureStrokes.length===0) return;
+  S.signatureRedo.push(S.signatureStrokes.pop());
+  render();
+}
+function redoSignature(){
+  if(S.signatureRedo.length===0) return;
+  S.signatureStrokes.push(S.signatureRedo.pop());
+  render();
+}
+(function setupSignaturePad(){
+  let drawing = false, currentStroke = null;
+  const phoneScreen = document.getElementById('phoneScreen');
+  const pointFromEvent = (canvas, e) => {
+    const rect = canvas.getBoundingClientRect();
+    return [e.clientX - rect.left, e.clientY - rect.top];
+  };
+  phoneScreen.addEventListener('pointerdown', (e)=>{
+    const canvas = e.target.closest('#sigCanvas');
+    if(!canvas) return;
+    drawing = true;
+    currentStroke = [pointFromEvent(canvas, e)];
+    canvas.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  window.addEventListener('pointermove', (e)=>{
+    if(!drawing) return;
+    const canvas = document.getElementById('sigCanvas');
+    if(!canvas) return;
+    const pt = pointFromEvent(canvas, e);
+    const prev = currentStroke[currentStroke.length-1];
+    currentStroke.push(pt);
+    const ctx = canvas.getContext('2d');
+    ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#171A21';
+    ctx.beginPath();
+    ctx.moveTo(prev[0], prev[1]);
+    ctx.lineTo(pt[0], pt[1]);
+    ctx.stroke();
+  });
+  window.addEventListener('pointerup', ()=>{
+    if(!drawing) return;
+    drawing = false;
+    if(currentStroke && currentStroke.length > 1){
+      S.signatureStrokes.push(currentStroke);
+      S.signatureRedo = [];
+      render();
+    }
+    currentStroke = null;
   });
 })();
 
