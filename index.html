@@ -388,6 +388,12 @@ h1,.h1{font-family:'Manrope';font-weight:800;font-size:21px;margin:2px 0 4px;let
 
 .divider{height:1px;background:#EEF0F3;margin:14px 0;}
 
+.route-grid{display:grid;grid-template-columns:36px 1fr;column-gap:12px;}
+.route-ic{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;}
+.route-line-wrap{display:flex;justify-content:center;}
+.route-line{width:2px;min-height:26px;height:100%;background-image:linear-gradient(to bottom,#D7DBE1 50%, transparent 0%);background-size:2px 8px;background-repeat:repeat-y;}
+.route-mid{margin:0;padding:9px 0;font-weight:700;color:#374151;display:flex;align-items:center;gap:6px;font-size:12.5px;}
+
 /* modal / sheet */
 .overlay{
   position:absolute;inset:0;background:rgba(10,12,16,.42);z-index:80;
@@ -494,6 +500,7 @@ const ICONS = {
 
 function fmtINR(n){ return '₹ ' + Number(n).toLocaleString('en-IN'); }
 function dropIconColor(stop){ return stop.color==='red' ? 'var(--danger)' : '#B7791F'; }
+function dropIconBg(stop){ return stop.color==='red' ? 'var(--danger-soft)' : 'var(--warning-soft)'; }
 
 /* ---------------- Mock data ---------------- */
 const DRIVER = {
@@ -534,7 +541,7 @@ const AVAILABLE_TRIPS = [
 const LEGS = [
   { label:'Pickup → Hub', from:{name:'Amazon Transportation Services', addr:'Plot No. 5, Sector 63, Noida, Uttar Pradesh 201301', icon:'truck'}, to:{name:'GoBhola Logistics Hub', addr:'Bhiwandi, Thane, Maharashtra 421302', icon:'warehouse'}, km:234, kmLeft:213 },
   { label:'Hub → Hub', from:{name:'GoBhola Logistics Hub', addr:'Bhiwandi, Thane, Maharashtra 421302', icon:'warehouse'}, to:{name:'GoBhola Regional Hub', addr:'Chakan, Pune, Maharashtra 410501', icon:'warehouse'}, km:162, kmLeft:96 },
-  { label:'Hub → Delivery', from:{name:'GoBhola Regional Hub', addr:'Chakan, Pune, Maharashtra 410501', icon:'warehouse'}, to:{name:'Reliance Retail Distribution Centre', addr:'NH-48, Manesar, Gurugram, Haryana 122051', icon:'pin'}, km:58, kmLeft:21 },
+  { label:'Hub → Delivery', from:{name:'GoBhola Regional Hub', addr:'Chakan, Pune, Maharashtra 410501', icon:'warehouse'}, to:{name:'Reliance Retail Distribution Centre', addr:'NH-48, Manesar, Gurugram, Haryana 122051', icon:'pin', color:'red'}, km:58, kmLeft:21 },
 ];
 
 const TRIP_HISTORY = [
@@ -636,6 +643,7 @@ const initialState = () => ({
   detailTripId:null,       // which trip the Trip Details page is showing
   detailsFromView:'available', // which tripsView to return to on back
   notificationsOpen:false, // full-page Notifications, pushed on top of whatever tab is active
+  fullPage:null,           // sos | report | contact — full-page overlays pushed on top of whatever tab is active
   profileSub:null,
   dlFront:false,
   dlBack:false,
@@ -1036,27 +1044,42 @@ function TripsTopTabs(){
 
 function TruckIllustration(){
   return `<div style="text-align:center;margin-bottom:14px;">
-      <svg width="180" height="90" viewBox="0 0 180 90" fill="none">
-        <rect x="10" y="30" width="90" height="42" rx="4" fill="#22A559"/>
-        <rect x="100" y="42" width="45" height="30" rx="3" fill="#F4F5F7" stroke="#C7CCD4"/>
-        <rect x="108" y="48" width="18" height="14" rx="2" fill="#8FD7EA"/>
-        <circle cx="35" cy="76" r="10" fill="#22262E"/><circle cx="35" cy="76" r="4" fill="#C7CCD4"/>
-        <circle cx="120" cy="76" r="10" fill="#22262E"/><circle cx="120" cy="76" r="4" fill="#C7CCD4"/>
-        <circle cx="140" cy="76" r="10" fill="#22262E"/><circle cx="140" cy="76" r="4" fill="#C7CCD4"/>
+      <svg width="220" height="120" viewBox="0 0 220 120" fill="none">
+        <ellipse cx="112" cy="106" rx="95" ry="7" fill="#EDEFF3"/>
+        <rect x="10" y="54" width="46" height="40" rx="4" fill="#F7F8FA" stroke="#C7CCD4" stroke-width="1.5"/>
+        <path d="M16,60 h26 a4,4 0 0 1 4,4 v10 h-30 z" fill="#8FD7EA" stroke="#C7CCD4" stroke-width="1.2"/>
+        <rect x="10" y="86" width="46" height="8" fill="#E7EAEF"/>
+        <circle cx="43" cy="70" r="3.4" fill="#FFD166"/>
+        <rect x="56" y="40" width="150" height="54" rx="5" fill="#22A559"/>
+        <rect x="56" y="40" width="150" height="10" fill="#1C8A4A"/>
+        ${Array.from({length:9}).map((_,i)=>`<line x1="${70+i*17}" y1="54" x2="${70+i*17}" y2="94" stroke="#1C8A4A" stroke-width="2"/>`).join('')}
+        <circle cx="32" cy="98" r="13" fill="#22262E"/><circle cx="32" cy="98" r="5.5" fill="#C7CCD4"/>
+        <circle cx="160" cy="98" r="13" fill="#22262E"/><circle cx="160" cy="98" r="5.5" fill="#C7CCD4"/>
+        <circle cx="184" cy="98" r="13" fill="#22262E"/><circle cx="184" cy="98" r="5.5" fill="#C7CCD4"/>
       </svg>
     </div>`;
 }
+function RouteTrack(from, fromBg, fromFg, kmLeft, to, toBg, toFg){
+  return `<div class="route-grid" style="margin-bottom:16px;">
+    <div class="route-ic" style="background:${fromBg};color:${fromFg};">${ICONS[from.icon]}</div>
+    <div><p style="margin:0;font-weight:600;font-size:13px;">${from.name}</p><p class="tiny muted" style="margin:1px 0 0;">${from.addr}</p></div>
+    <div class="route-line-wrap"><div class="route-line"></div></div>
+    <p class="route-mid">${ICONS.compass} <b style="color:#171A21">${kmLeft}KM</b>&nbsp;left to destination</p>
+    <div class="route-ic" style="background:${toBg};color:${toFg};">${ICONS[to.icon]}</div>
+    <div><p style="margin:0;font-weight:600;font-size:13px;">${to.name}</p><p class="tiny muted" style="margin:1px 0 0;">${to.addr}</p></div>
+  </div>`;
+}
 function SosReportContactRow(){
   return `<div class="row" style="justify-content:space-around;margin-bottom:16px;">
-      <div style="text-align:center;cursor:pointer;" onclick="openModal('sos')">
+      <div style="text-align:center;cursor:pointer;" onclick="openFullPage('sos')">
         <div style="width:48px;height:48px;border-radius:50%;background:var(--danger-soft);color:var(--danger);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;">${ICONS.siren}</div>
         <span class="tiny" style="font-weight:700;">SOS</span>
       </div>
-      <div style="text-align:center;cursor:pointer;" onclick="openModal('report')">
+      <div style="text-align:center;cursor:pointer;" onclick="openFullPage('report')">
         <div style="width:48px;height:48px;border-radius:50%;background:var(--warning-soft);color:var(--warning);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;">${ICONS.warnTri}</div>
         <span class="tiny" style="font-weight:700;">Report</span>
       </div>
-      <div style="text-align:center;cursor:pointer;" onclick="openModal('contact')">
+      <div style="text-align:center;cursor:pointer;" onclick="openFullPage('contact')">
         <div style="width:48px;height:48px;border-radius:50%;background:var(--accent-soft);color:var(--accent-dark);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;">${ICONS.phoneIc}</div>
         <span class="tiny" style="font-weight:700;">Contact</span>
       </div>
@@ -1127,7 +1150,7 @@ function screenTripsActive(){
           <span class="pill green">In Progress</span>
         </div>
         <div class="row gap10" style="align-items:flex-start;margin-bottom:12px;">
-          <div style="color:#B7791F;margin-top:1px;">${ICONS[leg.to.icon]}</div>
+          <div style="color:${dropIconColor(leg.to)};margin-top:1px;">${ICONS[leg.to.icon]}</div>
           <div><p style="margin:0;font-weight:600;font-size:13px;">${leg.to.name}</p><p class="tiny muted" style="margin:1px 0 0;">${leg.to.addr}</p></div>
         </div>
         <p class="small" style="margin:0 0 12px;color:var(--accent-dark);font-weight:700;">${ICONS.compass} You have reached your destination</p>
@@ -1151,16 +1174,8 @@ function screenTripsActive(){
         <div><p class="tiny muted" style="margin:0;">Trip ID</p><p style="font-weight:800;margin:1px 0 0;font-size:13px;">${S.activeTripId}</p></div>
         <span class="pill green">In Progress</span>
       </div>
-      <div class="row gap10" style="align-items:flex-start;margin-bottom:10px;">
-        <div style="color:var(--accent);margin-top:1px;">${ICONS[leg.from.icon]}</div>
-        <div><p style="margin:0;font-weight:600;font-size:13px;">${leg.from.name}</p><p class="tiny muted" style="margin:1px 0 0;">${leg.from.addr}</p></div>
-      </div>
-      <div class="row gap10" style="align-items:flex-start;margin-bottom:12px;">
-        <div style="color:#B7791F;margin-top:1px;">${ICONS[leg.to.icon]}</div>
-        <div><p style="margin:0;font-weight:600;font-size:13px;">${leg.to.name}</p><p class="tiny muted" style="margin:1px 0 0;">${leg.to.addr}</p></div>
-      </div>
-      <p class="small muted" style="margin:0 0 12px;">${ICONS.compass} <b style="color:#171A21">${leg.kmLeft}KM</b> left to destination · leg ${S.legIndex+1} of ${LEGS.length}</p>
-      <button class="btn btn-outline" style="margin-bottom:10px;">${ICONS.compass} Navigate on Google Map</button>
+      ${RouteTrack(leg.from, 'var(--accent-soft)', 'var(--accent-dark)', leg.kmLeft, leg.to, dropIconBg(leg.to), dropIconColor(leg.to))}
+      <button class="btn btn-ghost" style="margin-bottom:10px;">Navigate on Google Map</button>
       ${ isLast
         ? `<button class="btn btn-primary" onclick="reachDestination()">I've Reached the Destination</button>`
         : `<button class="btn btn-dark" onclick="openModal('otpLeg')">Verify &amp; Continue to Next Leg</button>` }
@@ -1520,6 +1535,8 @@ function openModal(name){ set({modal:name}); }
 function closeModal(){ set({modal:null}); }
 function openNotifications(){ set({notificationsOpen:true, modal:null}); }
 function closeNotifications(){ set({notificationsOpen:false}); }
+function openFullPage(name){ set({fullPage:name, modal:null}); }
+function closeFullPage(){ set({fullPage:null}); }
 
 function ModalRoot(){
   if(!S.modal) return '';
@@ -1534,13 +1551,11 @@ function ModalRoot(){
     cancelTrip: ModalCancelTrip,
     endConfirm: ModalEndConfirm,
     tripCompleted: ModalTripCompleted,
-    sos: ModalSos,
-    report: ModalReport,
-    contact: ModalContact,
     logout: ModalLogout,
   };
   return map[S.modal] ? map[S.modal]() : '';
 }
+const FULL_PAGE_MAP = { sos: screenSos, report: screenReport, contact: screenContact };
 
 const VERIFY_STEPS_TEXT = [
   'You will receive a call from our team to confirm your application.',
@@ -1759,20 +1774,19 @@ function ModalTripCompleted(){
   </div></div>`;
 }
 
-function ModalSos(){
-  return `<div class="overlay center" onclick="if(event.target===this) closeModal()"><div class="sheet pop">
-    ${BackHeader('Emergency (SOS)','closeModal()')}
-    <div style="text-align:center;padding:10px 6px 4px;">
-      <div style="width:180px;height:180px;border-radius:50%;background:var(--danger-soft);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
-        <div style="width:130px;height:130px;border-radius:50%;background:rgba(229,72,77,.35);display:flex;align-items:center;justify-content:center;">
-          <div style="width:88px;height:88px;border-radius:50%;background:var(--danger);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;cursor:pointer;" onclick="callSos()">Call SOS</div>
-        </div>
+function screenSos(){
+  return `
+  ${BackHeader('Emergency (SOS)','closeFullPage()')}
+  <div class="screen-scroll"><div class="screen-pad" style="text-align:center;padding-top:10px;">
+    <div style="width:180px;height:180px;border-radius:50%;background:var(--danger-soft);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+      <div style="width:130px;height:130px;border-radius:50%;background:rgba(229,72,77,.35);display:flex;align-items:center;justify-content:center;">
+        <div style="width:88px;height:88px;border-radius:50%;background:var(--danger);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;cursor:pointer;" onclick="callSos()">Call SOS</div>
       </div>
-      <p style="font-weight:800;margin:0 0 6px;">Tap to get immediate help.</p>
-      <p class="small muted" style="margin:0 0 16px;">Use this only in genuine emergency situations like accident, breakdown, threat, or any safety issue.</p>
-      <div class="info-banner" style="background:var(--danger-soft);color:#8a3336;text-align:left;margin-bottom:10px;">${ICONS.phoneIc} This will call our 24×7 support team and share your current location.</div>
-      <div class="card row gap10" style="text-align:left;"><div style="color:var(--accent)">${ICONS.compass}</div><div><p style="font-weight:700;margin:0;font-size:13px;">Your current location</p><p class="tiny muted" style="margin:1px 0 0;">NH 48, Bhiwadi, Rajasthan · 28.2046° N, 76.8567° E</p></div></div>
     </div>
+    <p style="font-weight:800;margin:0 0 6px;">Tap to get immediate help.</p>
+    <p class="small muted" style="margin:0 0 16px;">Use this only in genuine emergency situations like accident, breakdown, threat, or any safety issue.</p>
+    <div class="info-banner" style="background:var(--danger-soft);color:#8a3336;text-align:left;margin-bottom:10px;">${ICONS.phoneIc} This will call our 24×7 support team and share your current location.</div>
+    <div class="card row gap10" style="text-align:left;"><div style="color:var(--accent)">${ICONS.compass}</div><div><p style="font-weight:700;margin:0;font-size:13px;">Your current location</p><p class="tiny muted" style="margin:1px 0 0;">NH 48, Bhiwadi, Rajasthan · 28.2046° N, 76.8567° E</p></div></div>
   </div></div>`;
 }
 function callSos(){
@@ -1786,9 +1800,10 @@ const REPORT_OPTIONS = [
   {icon:'warnTri', c:'#B7791F', bg:'#FCF1DA', t:'Road Block', s:'Road is blocked or not accessible'},
   {icon:'safetyIc', c:'#7C5CEE', bg:'#F1ECFE', t:'Safety Issue', s:'Threat, harassment or unsafe situation'},
 ];
-function ModalReport(){
-  return `<div class="overlay center" onclick="if(event.target===this) closeModal()"><div class="sheet pop">
-    ${BackHeader('Report','closeModal()')}
+function screenReport(){
+  return `
+  ${BackHeader('Report','closeFullPage()')}
+  <div class="screen-scroll"><div class="screen-pad">
     <p style="font-weight:800;font-size:16px;margin:8px 0 12px;">What do you want to report?</p>
     <div class="stack" style="margin-bottom:14px;">
       ${REPORT_OPTIONS.map(o=>`<div class="card" style="display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;${S.reportType===o.t?'border-color:var(--accent);':''}" onclick="set({reportType:'${o.t}'})">
@@ -1798,17 +1813,18 @@ function ModalReport(){
     </div>
     <div class="field"><label>Other (optional)</label><textarea rows="2" placeholder="Write report here..."></textarea></div>
     <div class="info-banner blue" style="margin-bottom:12px;">${ICONS.compass} Your current location, trip details and time will be shared with the support team.</div>
+    <div class="card row gap10" style="text-align:left;margin-bottom:16px;"><div style="color:var(--accent)">${ICONS.compass}</div><div><p style="font-weight:700;margin:0;font-size:13px;">Your current location</p><p class="tiny muted" style="margin:1px 0 0;">NH 48, Bhiwadi, Rajasthan · 28.2046° N, 76.8567° E</p></div></div>
     <div class="slide-confirm" onclick="submitReport()"><div class="fill" style="width:100%"></div><div class="knob">›</div><div class="label">Slide to submit issue</div></div>
   </div></div>`;
 }
 function submitReport(){
   const type = S.reportType || 'Road Block';
   addNotif({icon:'clipboard', bg:'var(--warning-soft)', fg:'var(--warning)', t:`${type} issue reported`, body:`Your report for the ${type.toLowerCase()} at your current location has been sent.`, time:'Just now', track:2});
-  closeModal();
+  closeFullPage();
   showToast('Issue submitted to support');
 }
 
-function ModalContact(){
+function screenContact(){
   const Row = (icon,bg,c,title,sub,phone) => `
     <div class="row between" style="padding:12px 0;">
       <div class="row gap10"><div style="width:38px;height:38px;border-radius:50%;background:${bg};color:${c};display:flex;align-items:center;justify-content:center;">${ICONS[icon]}</div>
@@ -1816,13 +1832,18 @@ function ModalContact(){
       </div>
       <button class="btn btn-dark btn-sm" style="width:auto;" onclick="showToast('Calling ${title}…')">${ICONS.phoneIc} Call</button>
     </div>`;
-  return `<div class="overlay center" onclick="if(event.target===this) closeModal()"><div class="sheet pop">
-    ${BackHeader('Contact','closeModal()')}
+  const legTrip = AVAILABLE_TRIPS[S.legIndex];
+  const contact = legTrip && legTrip.contact;
+  const isDelivery = contact && contact.role === 'Delivery Contact';
+  return `
+  ${BackHeader('Contact','closeFullPage()')}
+  <div class="screen-scroll"><div class="screen-pad">
+    ${contact ? `
     <p class="tiny" style="color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin:6px 0 4px;">Trip Contacts</p>
     <p class="tiny muted" style="margin:-2px 0 4px;">People directly involved in this trip</p>
     <div class="card" style="padding:2px 14px;margin-bottom:2px;">
-      ${Row('user','var(--accent-soft)','var(--accent-dark)','Pickup Contact',`${PICKUP_CONTACT.name} • ${PICKUP_CONTACT.role}`,PICKUP_CONTACT.phone)}
-    </div>
+      ${Row(isDelivery?'user':'truck', isDelivery?'var(--danger-soft)':'var(--accent-soft)', isDelivery?'var(--danger)':'var(--accent-dark)', contact.role, `${contact.name} • ${contact.title}`, contact.phone)}
+    </div>` : ''}
     <p class="tiny" style="color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin:16px 0 4px;">GoBhola Support</p>
     <div class="card" style="padding:2px 14px;">
       ${Row('headset','#EAF1FE','#3B82F6','Support Team (24×7)','Our team is always here to help','+91 1800 123 4567')}
@@ -1914,12 +1935,13 @@ function renderScreenInner(){
 }
 
 function render(){
+  const overlay = S.notificationsOpen ? screenNotifications() : (S.fullPage ? FULL_PAGE_MAP[S.fullPage]() : null);
   document.getElementById('phoneScreen').innerHTML = `
     <div class="phone-notch"></div>
     ${StatusBar()}
-    ${S.notificationsOpen ? screenNotifications() : renderScreenInner()}
+    ${overlay !== null ? overlay : renderScreenInner()}
     ${S.toast ? `<div class="toast">${S.toast}</div>` : ''}
-    ${S.notificationsOpen ? '' : ModalRoot()}
+    ${overlay !== null ? '' : ModalRoot()}
   `;
   renderPanel();
   renderTopbar();
@@ -1936,6 +1958,7 @@ function renderTopbar(){
     if(S.tab==='profile' && S.profileSub) parts.push(S.profileSub);
   }
   if(S.notificationsOpen) parts.push('Notifications');
+  if(S.fullPage) parts.push('Page: '+S.fullPage);
   if(S.modal) parts.push('Modal: '+S.modal);
   document.getElementById('stageTopbar').innerHTML = parts.map((p,i)=>i===0?`<b>${p}</b>`:`<span class="sep">/</span>${p}`).join(' ');
 }
@@ -2053,9 +2076,11 @@ function renderPanel(){
     <div class="panel-section">
       <p class="panel-eyebrow">In-trip Overlays</p>
       <div class="nav-grid">
-        ${NavBtn('Emergency SOS', S.modal==='sos', "openModal('sos')", null,'warn')}
-        ${NavBtn('Report Issue', S.modal==='report', "openModal('report')")}
-        ${NavBtn('Contact', S.modal==='contact', "openModal('contact')")}
+        ${NavBtn('Emergency SOS', S.fullPage==='sos', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'inProgress'}); openFullPage('sos')", null,'warn')}
+        ${NavBtn('Report Issue', S.fullPage==='report', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'inProgress'}); openFullPage('report')")}
+        ${NavBtn('Contact — Pickup leg', S.fullPage==='contact' && S.legIndex===0, "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'inProgress',legIndex:0}); openFullPage('contact')", 'Shows Pickup Contact card')}
+        ${NavBtn('Contact — Hub-to-hub leg', S.fullPage==='contact' && S.legIndex===1, "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'inProgress',legIndex:1}); openFullPage('contact')", 'No Trip Contacts card')}
+        ${NavBtn('Contact — Delivery leg', S.fullPage==='contact' && S.legIndex===2, "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'inProgress',legIndex:2}); openFullPage('contact')", 'Shows Delivery Contact card')}
         ${NavBtn('Notifications', S.notificationsOpen, "openNotifications()")}
       </div>
     </div>
