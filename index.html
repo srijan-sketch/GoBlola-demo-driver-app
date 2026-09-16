@@ -473,6 +473,7 @@ const ICONS = {
 };
 
 function fmtINR(n){ return '₹ ' + Number(n).toLocaleString('en-IN'); }
+function dropIconColor(stop){ return stop.color==='red' ? 'var(--danger)' : '#B7791F'; }
 
 /* ---------------- Mock data ---------------- */
 const DRIVER = {
@@ -490,13 +491,20 @@ const SIGNUP_DL = {
 };
 
 const AVAILABLE_TRIPS = [
+  // Type 1: Client pickup -> Hub (first-mile)
   { id:'TRIP-456874256', earn:3079, km:234, eta:'7h 24m', ratePerKm:18, reportingBy:'12/09/2026, 12:30 PM', handoverBy:'12/09/2026, 07:30 PM', handoverLabel:'Handover by',
-    pickup:{name:'Amazon Transportation Services', addr:'Plot No. 5, Sector 63, Noida, Uttar Pradesh 201301'},
-    drop:{name:'GoBhola Logistics Hub', addr:'Bhiwadi, Thane, Maharashtra 421302'},
+    pickup:{name:'Amazon Transportation Services', addr:'Plot No. 5, Sector 63, Noida, Uttar Pradesh 201301', icon:'truckTab'},
+    drop:{name:'GoBhola Logistics Hub', addr:'Bhiwadi, Thane, Maharashtra 421302', icon:'warehouse', color:'amber'},
     cargo:'General Goods', vehicle:'32 ft Container', locked:false },
-  { id:'TRIP-991023841', earn:4250, km:150, eta:'5h 10m', ratePerKm:28, reportingBy:'Today, 08:30 AM', handoverBy:'Today, 05:30 PM', handoverLabel:'Delivery by',
-    pickup:{name:'GoBhola Logistics Hub', addr:'Kundli, Sonipat, Haryana 131028'},
-    drop:{name:'Reliance Retail Distribution Centre', addr:'NH-48, Manesar, Gurugram, Haryana 122051'},
+  // Type 2: Hub -> Hub (mid-mile transfer)
+  { id:'TRIP-772104459', earn:3650, km:180, eta:'6h 15m', ratePerKm:20, reportingBy:'12/09/2026, 12:30 PM', handoverBy:'12/09/2026, 07:30 PM', handoverLabel:'Handover by',
+    pickup:{name:'GoBhola Logistics Hub', addr:'Bhiwadi, Thane, Maharashtra 421302', icon:'warehouse'},
+    drop:{name:'GoBhola Logistics Hub', addr:'Kundli, Sonipat, Haryana 131028', icon:'warehouse', color:'amber'},
+    cargo:'Container Transfer', vehicle:'32 ft Container', locked:false },
+  // Type 3: Hub -> Final delivery (last-mile)
+  { id:'TRIP-991023841', earn:4250, km:150, eta:'5h 10m', ratePerKm:28, reportingBy:'12/09/2026, 12:30 PM', handoverBy:'12/09/2026, 07:30 PM', handoverLabel:'Delivery by',
+    pickup:{name:'GoBhola Logistics Hub', addr:'Kundli, Sonipat, Haryana 131028', icon:'warehouse'},
+    drop:{name:'Reliance Retail Distribution Centre', addr:'NH-48, Manesar, Gurugram, Haryana 122051', icon:'pin', color:'red'},
     cargo:'FMCG Pallets', vehicle:'22 ft Truck', locked:true,
     lockMsg:'Not available right now. You can accept trip after your 14-hour driving window ends.' },
 ];
@@ -891,11 +899,11 @@ function TripCard(trip, mode){
         <span>${trip.reportingBy}</span><span>${trip.handoverBy}</span>
       </div>
       <div class="row gap10" style="margin-bottom:8px;align-items:flex-start;">
-        <div style="color:var(--accent);margin-top:1px;">${ICONS.truckTab}</div>
+        <div style="color:var(--accent);margin-top:1px;">${ICONS[trip.pickup.icon]}</div>
         <div><p style="margin:0;font-weight:600;font-size:13px;">${trip.pickup.name}</p><p class="tiny muted" style="margin:1px 0 0;">${trip.pickup.addr}</p></div>
       </div>
       <div class="row gap10" style="align-items:flex-start;margin-bottom:14px;">
-        <div style="color:#B7791F;margin-top:1px;">${ICONS.warehouse}</div>
+        <div style="color:${dropIconColor(trip.drop)};margin-top:1px;">${ICONS[trip.drop.icon]}</div>
         <div><p style="margin:0;font-weight:600;font-size:13px;">${trip.drop.name}</p><p class="tiny muted" style="margin:1px 0 0;">${trip.drop.addr}</p></div>
       </div>
       ${ mode==='available' ? (
@@ -1013,11 +1021,11 @@ function screenTripsActive(){
       </div>
       <div class="card">
         <div class="row gap10" style="align-items:flex-start;margin-bottom:12px;">
-          <div style="color:var(--accent);margin-top:1px;">${ICONS.truckTab}</div>
+          <div style="color:var(--accent);margin-top:1px;">${ICONS[trip.pickup.icon]}</div>
           <div><p style="margin:0;font-weight:600;font-size:13px;">${trip.pickup.name}</p><p class="tiny muted" style="margin:1px 0;">${trip.pickup.addr}</p><p class="tiny" style="margin:0;">${ICONS.calendar} Reporting by <b>${trip.reportingBy}</b></p></div>
         </div>
         <div class="row gap10" style="align-items:flex-start;">
-          <div style="color:#B7791F;margin-top:1px;">${ICONS.warehouse}</div>
+          <div style="color:${dropIconColor(trip.drop)};margin-top:1px;">${ICONS[trip.drop.icon]}</div>
           <div><p style="margin:0;font-weight:600;font-size:13px;">${trip.drop.name}</p><p class="tiny muted" style="margin:1px 0;">${trip.drop.addr}</p></div>
         </div>
       </div>
@@ -1533,11 +1541,11 @@ function ModalTripDetails(){
     </div>
     <div class="card" style="margin-bottom:10px;">
       <p class="tiny muted" style="margin:0 0 8px;font-weight:700;">PICKUP FROM</p>
-      <div class="row gap10" style="align-items:flex-start;"><div style="color:var(--accent)">${ICONS.truckTab}</div><div><p style="margin:0;font-weight:700;font-size:13px;">${trip.pickup.name}</p><p class="tiny muted" style="margin:1px 0 6px;">${trip.pickup.addr}</p><p class="tiny" style="margin:0;">${ICONS.calendar} Reporting by <b>${trip.reportingBy}</b></p></div></div>
+      <div class="row gap10" style="align-items:flex-start;"><div style="color:var(--accent)">${ICONS[trip.pickup.icon]}</div><div><p style="margin:0;font-weight:700;font-size:13px;">${trip.pickup.name}</p><p class="tiny muted" style="margin:1px 0 6px;">${trip.pickup.addr}</p><p class="tiny" style="margin:0;">${ICONS.calendar} Reporting by <b>${trip.reportingBy}</b></p></div></div>
     </div>
     <div class="card" style="margin-bottom:10px;">
-      <p class="tiny muted" style="margin:0 0 8px;font-weight:700;">HANDOVER AT</p>
-      <div class="row gap10" style="align-items:flex-start;"><div style="color:#B7791F">${ICONS.warehouse}</div><div><p style="margin:0;font-weight:700;font-size:13px;">${trip.drop.name}</p><p class="tiny muted" style="margin:1px 0 6px;">${trip.drop.addr}</p><p class="tiny" style="margin:0;">${ICONS.clock} ${trip.handoverLabel} <b>${trip.handoverBy}</b></p></div></div>
+      <p class="tiny muted" style="margin:0 0 8px;font-weight:700;">${trip.handoverLabel==='Delivery by'?'DELIVERY AT':'HANDOVER AT'}</p>
+      <div class="row gap10" style="align-items:flex-start;"><div style="color:${dropIconColor(trip.drop)}">${ICONS[trip.drop.icon]}</div><div><p style="margin:0;font-weight:700;font-size:13px;">${trip.drop.name}</p><p class="tiny muted" style="margin:1px 0 6px;">${trip.drop.addr}</p><p class="tiny" style="margin:0;">${ICONS.clock} ${trip.handoverLabel} <b>${trip.handoverBy}</b></p></div></div>
     </div>
     <div class="row gap10" style="margin-bottom:10px;">
       <div class="card" style="flex:1;text-align:center;"><p class="tiny muted" style="margin:0;">${ICONS.route} Distance</p><p style="font-weight:800;margin:4px 0 0;">${trip.km} KM</p></div>
