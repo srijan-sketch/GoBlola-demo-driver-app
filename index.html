@@ -127,8 +127,9 @@ h1,h2,h3,.font-display{font-family:'Manrope',Inter,sans-serif;}
 
 /* ---- Brand lockup in panel ---- */
 .brand{
-  display:flex;align-items:center;gap:10px;margin-bottom:18px;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:18px;
 }
+.brand-lockup{display:flex;align-items:center;gap:10px;min-width:0;}
 .brand-mark{
   width:34px;height:34px;border-radius:10px;
   background:linear-gradient(155deg, var(--accent), var(--accent-dark));
@@ -168,12 +169,13 @@ h1,h2,h3,.font-display{font-family:'Manrope',Inter,sans-serif;}
 }
 .state-readout b{color:var(--panel-fg);font-weight:700;}
 
-.btn-reset{
-  width:100%;margin-top:10px;border:1px dashed var(--panel-border);background:transparent;
-  color:var(--panel-muted);font-family:inherit;font-weight:600;font-size:12px;
-  padding:8px;border-radius:9px;cursor:pointer;
+.btn-reset-header{
+  flex:0 0 auto;border:1px solid var(--panel-border);background:transparent;
+  color:var(--panel-muted);font-family:inherit;font-weight:600;font-size:11.5px;
+  padding:7px 10px;border-radius:9px;cursor:pointer;white-space:nowrap;
+  display:flex;align-items:center;gap:5px;
 }
-.btn-reset:hover{border-color:var(--panel-muted-2);color:var(--panel-fg);}
+.btn-reset-header:hover{border-color:var(--danger);color:var(--danger);}
 
 /* nav rows */
 .nav-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
@@ -1817,8 +1819,11 @@ function renderPanel(){
   const trip = S.tripPhase;
   document.getElementById('panel').innerHTML = `
     <div class="brand">
-      <div class="brand-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z" fill="#fff" fill-opacity=".92"/><circle cx="12" cy="9" r="2.6" fill="#0E9F6E"/></svg></div>
-      <div><div class="brand-title">GoBhola Flow Deck</div><div class="brand-sub">Driver app · clickable prototype</div></div>
+      <div class="brand-lockup">
+        <div class="brand-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z" fill="#fff" fill-opacity=".92"/><circle cx="12" cy="9" r="2.6" fill="#0E9F6E"/></svg></div>
+        <div><div class="brand-title">GoBhola Flow Deck</div><div class="brand-sub">Driver app · clickable prototype</div></div>
+      </div>
+      <button class="btn-reset-header" onclick="resetAll()" title="Reset entire prototype">↺ Reset</button>
     </div>
 
     <div class="panel-section">
@@ -1866,7 +1871,6 @@ function renderPanel(){
       <div class="nav-grid c1" style="margin-top:6px;">
         ${NavBtn('Certification-complete celebration', S.modal==='certCelebrate', "openModal('certCelebrate')", 'Laurel badge shown the moment a driver gets certified')}
       </div>
-      <button class="btn-reset" onclick="resetAll()">↺ Reset entire prototype</button>
     </div>
 
     <div class="panel-section">
