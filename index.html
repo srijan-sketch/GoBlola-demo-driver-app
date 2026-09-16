@@ -735,7 +735,7 @@ function AppHeader(){
   return `<div class="app-header">
     <div class="go-logo"><span class="g">Go</span>Bhola</div>
     <div class="row gap8">
-      <div class="icon-btn" onclick="openFullPage('gamification')">${ICONS.trophy}</div>
+      ${S.certified ? `<div class="icon-btn" onclick="openFullPage('gamification')">${ICONS.trophy}</div>` : ''}
       <div class="icon-btn" onclick="openNotifications()">${ICONS.bell}<span class="badge"></span></div>
     </div>
   </div>`;
@@ -2155,7 +2155,8 @@ function renderTopbar(){
 function resetAll(){ S = initialState(); render(); }
 function setCertified(v){
   const justCertified = v && !S.certified;
-  set({certified:v, modal: justCertified ? 'certCelebrate' : S.modal});
+  const closeGamification = !v && S.fullPage==='gamification';
+  set({certified:v, modal: justCertified ? 'certCelebrate' : S.modal, fullPage: closeGamification ? null : S.fullPage});
 }
 
 /* ---------------- Control Panel ---------------- */
