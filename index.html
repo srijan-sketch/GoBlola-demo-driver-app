@@ -586,7 +586,8 @@ const initialState = () => ({
   endKind:'final',         // leg (4-step, hub handover) | final (4-step, trip end)
   declareStart:false,
   declareEnd:false,
-  detailTripId:null,       // which trip the details sheet is showing
+  detailTripId:null,       // which trip the Trip Details page is showing
+  detailsFromView:'available', // which tripsView to return to on back
   profileSub:null,
   dlFront:false,
   dlBack:false,
@@ -1189,7 +1190,8 @@ function nextEndStep(){
 }
 
 /* ---------------- Trips actions ---------------- */
-function openDetail(id){ set({modal:'tripDetailsAvailable', detailTripId:id}); }
+function openDetail(id){ set({detailTripId:id, detailsFromView:S.tripsView, tripsView:'details', modal:null}); }
+function closeDetail(){ set({tripsView:S.detailsFromView}); }
 function acceptTrip(id){
   set({modal:null, activeTripId:id, tripPhase:'accepted', tripsView:'upcoming'});
   showToast('Trip added to your upcoming list.');
@@ -1430,7 +1432,6 @@ function ModalRoot(){
     certCelebrate: ModalCertCelebrate,
     welcomeBack: ModalWelcomeBack,
     welcomeNew: ModalWelcomeNew,
-    tripDetailsAvailable: ModalTripDetails,
     otpStart: ()=>ModalOtp('Verify & start trip','Enter the 6-digit OTP shared by the merchant to confirm and start the trip.','submitOtpStart()'),
     otpLeg: ()=>ModalOtp('Verify arrival','Enter the 6-digit OTP shared by the hub coordinator to confirm handover and continue.','submitOtpLeg()'),
     cancelTrip: ModalCancelTrip,
@@ -1552,15 +1553,15 @@ function ModalWelcomeBack(){
   </div></div>`;
 }
 
-function ModalTripDetails(){
+function screenTripDetails(){
   const trip = AVAILABLE_TRIPS.find(t=>t.id===S.detailTripId) || AVAILABLE_TRIPS[0];
   const hasActiveTrip = S.tripPhase !== 'none';
   const isThisAccepted = hasActiveTrip && trip.id === S.activeTripId;
   const windowLocked = S.certified && hasActiveTrip && !isThisAccepted;
   const canCancel = ['accepted','preActive'].includes(S.tripPhase) && trip.id===S.activeTripId;
-  return `<div class="overlay"><div class="sheet">
-    <div class="sheet-grabber"></div>
-    <h2 style="text-align:center;font-size:16.5px;margin:0 0 14px;">Trip Details</h2>
+  return `
+  ${BackHeader('Trip Details', 'closeDetail()')}
+  <div class="screen-scroll"><div class="screen-pad">
     <div class="card" style="background:var(--accent-soft);border:none;margin-bottom:12px;">
       <div class="row between"><p class="tiny muted" style="margin:0;">Trip ID</p><p style="font-weight:700;margin:0;font-size:12.5px;">${trip.id}</p></div>
     </div>
@@ -1592,12 +1593,14 @@ function ModalTripDetails(){
       <div class="row between"><p class="tiny muted" style="margin:0;">Earnings</p><p class="tiny muted" style="margin:0;">₹${trip.ratePerKm}/km</p></div>
       <p style="font-weight:800;font-size:22px;margin:4px 0 0;color:var(--accent-dark);">${fmtINR(trip.earn)}</p>
     </div>
-    ${ !S.certified ? `<button class="btn btn-ghost" onclick="closeModal(); openModal('certRequired')">${ICONS.lock} Accept Trip</button>`
+  </div></div>
+  <div class="screen-pad">
+    ${ !S.certified ? `<button class="btn btn-ghost" onclick="openModal('certRequired')">${ICONS.lock} Accept Trip</button>`
       : canCancel ? `<div class="slide-confirm danger" onclick="cancelTripConfirmed()"><div class="fill" style="width:100%"></div><div class="knob">›</div><div class="label">Slide to cancel trip</div></div>`
       : windowLocked ? `<button class="btn btn-outline" disabled>${WINDOW_LOCK_MSG}</button>`
       : isThisAccepted ? `<button class="btn btn-outline" disabled>Cancellation not available</button>`
       : `<button class="btn btn-primary" onclick="acceptTrip('${trip.id}')">Accept Trip</button>` }
-  </div></div>`;
+  </div>`;
 }
 
 function ModalOtp(title, body, onSubmit){
@@ -1793,6 +1796,7 @@ function renderScreenInner(){
       if(S.tripsView==='available') return screenTripsAvailable();
       if(S.tripsView==='upcoming') return screenTripsUpcoming();
       if(S.tripsView==='active') return screenTripsActive();
+      if(S.tripsView==='details') return screenTripDetails();
     }
     if(S.tab==='earnings') return screenEarnings();
     if(S.tab==='profile'){
@@ -1918,7 +1922,7 @@ function renderPanel(){
       <p class="panel-eyebrow">Trips Lifecycle <span class="cnt">${tripLabel(trip)}</span></p>
       <div class="nav-grid c1">
         ${NavBtn('1 · Browse Available Trips', isHome && S.tab==='trips' && S.tripsView==='available', "set({screen:'home',tab:'trips',tripsView:'available'})", S.certified?'Live list · locked-window demo included':'Locked state for unverified drivers')}
-        ${NavBtn('2 · Trip Details sheet', S.modal==='tripDetailsAvailable', "openDetail(AVAILABLE_TRIPS[0].id); set({screen:'home',tab:'trips'})", 'Accept / Cancel actions live here')}
+        ${NavBtn('2 · Trip Details page', isHome && S.tab==='trips' && S.tripsView==='details', "set({screen:'home',tab:'trips'}); openDetail(AVAILABLE_TRIPS[0].id)", 'Full-page · Accept / Cancel actions live here')}
         ${NavBtn('3 · Accepted → Upcoming tab', trip==='accepted', "set({screen:'home',tab:'trips',tripsView:'upcoming',tripPhase:'accepted',activeTripId:AVAILABLE_TRIPS[0].id,modal:null})", 'Tap "Trip Accepted →" to promote it to Active')}
         ${NavBtn('4 · Promoted to Active tab', trip==='preActive', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'preActive',modal:null})", '3-tab layout · "Verify & Start Trip" button')}
         ${NavBtn('5 · Verify & Start OTP', S.modal==='otpStart', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'preActive'}); openModal('otpStart')", '6-digit OTP sheet')}
