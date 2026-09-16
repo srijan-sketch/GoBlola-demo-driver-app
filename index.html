@@ -1133,11 +1133,11 @@ function screenTripsActive(){
         <div class="divider" style="margin:0 0 12px;"></div>
         <div class="row gap10" style="align-items:flex-start;margin-bottom:12px;">
           <div style="color:var(--accent);margin-top:1px;">${ICONS[trip.pickup.icon]}</div>
-          <div><p style="margin:0;font-weight:600;font-size:13px;">${trip.pickup.name}</p><p class="tiny muted" style="margin:1px 0;">${trip.pickup.addr}</p></div>
+          <div><p style="margin:0;font-weight:600;font-size:13px;">${trip.pickup.name}</p><p class="tiny muted" style="margin:1px 0 6px;">${trip.pickup.addr}</p><p class="tiny" style="margin:0;">${ICONS.calendar} Reporting by <b>${trip.reportingBy}</b></p></div>
         </div>
         <div class="row gap10" style="align-items:flex-start;margin-bottom:16px;">
           <div style="color:${dropIconColor(trip.drop)};margin-top:1px;">${ICONS[trip.drop.icon]}</div>
-          <div><p style="margin:0;font-weight:600;font-size:13px;">${trip.drop.name}</p><p class="tiny muted" style="margin:1px 0;">${trip.drop.addr}</p></div>
+          <div><p style="margin:0;font-weight:600;font-size:13px;">${trip.drop.name}</p><p class="tiny muted" style="margin:1px 0 6px;">${trip.drop.addr}</p><p class="tiny" style="margin:0;">${ICONS.clock} ${trip.handoverLabel} <b>${trip.handoverBy}</b></p></div>
         </div>
         ${canCancel ? `
           <div class="row gap10"><button class="btn btn-outline" style="flex:1;" onclick="openModal('cancelTrip')">Cancel</button><button class="btn btn-primary" style="flex:1;" disabled>Verify &amp; Start</button></div>
