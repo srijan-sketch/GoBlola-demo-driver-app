@@ -526,6 +526,10 @@ const END_CHECKLIST = [
   {icon:'camera', title:'Proof of Handover', body:'Upload or capture dock handover photos (cargo condition, seal integrity, or signed LR copy).'},
   {icon:'check', title:'Declaration', body:null},
 ];
+// Shorter re-verification checklist reused at each hub handover (skips fuel/odometer + cargo photos)
+const SHORT_START_CHECKLIST = [START_CHECKLIST[0], START_CHECKLIST[1], START_CHECKLIST[2], START_CHECKLIST[5]];
+
+const PICKUP_CONTACT = { name:'Rajesh Kumar', role:'Manager', phone:'+91 1800 123 4567' };
 
 /* ---------------- State ---------------- */
 const initialState = () => ({
@@ -533,16 +537,23 @@ const initialState = () => ({
   screen:'mobile',
   tab:'trips',
   tripsView:'available',
-  tripPhase:'none',        // none -> accepted -> preActive -> checklistStart -> inProgress -> checklistEnd -> completed
+  // none -> accepted -> preActive -> checklistStart -> startCelebrate -> inProgress
+  //      -> (per hub leg: legEndChecklist -> legStartChecklist -> inProgress)
+  //      -> ending -> checklistEnd -> completed
+  tripPhase:'none',
   legIndex:0,
   activeTripId: AVAILABLE_TRIPS[0].id,
   startStep:0,
   endStep:0,
+  startKind:'full',        // full (6-step, trip start) | short (4-step, hub handover)
+  endKind:'final',         // leg (4-step, hub handover) | final (4-step, trip end)
   declareStart:false,
   declareEnd:false,
   detailTripId:null,       // which trip the details sheet is showing
   profileSub:null,
-  modal:null,              // certRequired | otpStart | otpLeg | cancelTrip | endConfirm | sos | report | contact | notifications | logout | tripCompleted
+  notifEnabled:true,
+  everCertified:false,     // tracks whether the cert-complete celebration has already played
+  modal:null,              // certRequired | certCelebrate | otpStart | otpLeg | cancelTrip | endConfirm | sos | report | contact | notifications | logout | tripCompleted
   otpValue:'',
   toast:null,
   resendTimer:36,
@@ -780,7 +791,7 @@ function TripCard(trip, mode){
                <button class="btn btn-ghost" disabled style="color:#C2C8D2;">Accept Trip</button>
              </div>`
           : `<div class="row gap10"><button class="btn btn-outline btn-sm" style="flex:1;" onclick="openDetail('${trip.id}')">View Details</button><button class="btn btn-primary btn-sm" style="flex:1;" onclick="acceptTrip('${trip.id}')">Accept Trip</button></div>`
-      ) : `<div class="row gap10"><button class="btn btn-outline btn-sm" style="flex:1;" onclick="openDetail('${trip.id}')">View Details</button><button class="btn btn-primary btn-sm" style="flex:1;background:var(--accent-soft);color:var(--accent-dark);" disabled>Trip Accepted</button></div>`}
+      ) : `<div class="row gap10"><button class="btn btn-outline btn-sm" style="flex:1;" onclick="openDetail('${trip.id}')">View Details</button><button class="btn btn-primary btn-sm" style="flex:1;" onclick="goToActive()">Trip Accepted →</button></div>`}
     </div>
     ${ mode==='available' && locked && !gatedByCert ? `
       <div style="position:absolute;inset:0;background:rgba(255,255,255,.82);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;border-radius:16px;">
@@ -804,14 +815,15 @@ function screenTripsAvailable(){
         <p class="small muted" style="margin:0 0 16px;">Complete your GoBhola certification to start accepting trips.</p>
         <button class="btn btn-outline btn-sm" onclick="openModal('certRequired')">See what's needed</button>
       </div>
-    ` : AVAILABLE_TRIPS.map(t=>`<div style="position:relative;">${TripCard(t,'available')}</div>`).join('')}
+    ` : AVAILABLE_TRIPS.map(t=>`<div style="position:relative;">${TripCard(t,'available')}</div>`).join('') +
+      (AVAILABLE_TRIPS.some(t=>t.locked) ? `<div style="text-align:center;margin-top:4px;"><span class="pill dark" style="cursor:pointer;" onclick="document.getElementById('phoneScreen').querySelector('.screen-scroll').scrollTo({top:9999,behavior:'smooth'})"><span style="display:inline-flex;transform:rotate(90deg);">${ICONS.chevron}</span> Next available trip</span></div>` : '')}
   </div></div>
   ${TabBar()}`;
 }
 
 function screenTripsUpcoming(){
   const trip = AVAILABLE_TRIPS.find(t=>t.id===S.activeTripId);
-  const hasTrip = ['accepted','preActive'].includes(S.tripPhase);
+  const hasTrip = S.tripPhase==='accepted';
   return `
   ${AppHeader()}
   <div class="screen-scroll"><div class="screen-pad" style="padding-top:2px;">
@@ -833,8 +845,8 @@ function screenTripsUpcoming(){
 }
 
 function TripsTopTabs(){
-  const isActive = ['checklistStart','inProgress','checklistEnd'].includes(S.tripPhase);
-  const upcomingCount = ['accepted','preActive'].includes(S.tripPhase) ? 1 : 0;
+  const isActive = ['preActive','checklistStart','startCelebrate','inProgress','legEndChecklist','legStartChecklist','ending','checklistEnd'].includes(S.tripPhase);
+  const upcomingCount = S.tripPhase==='accepted' ? 1 : 0;
   const tabs = isActive
     ? [{id:'active',label:'Active'},{id:'upcoming',label:'Upcoming',n:0},{id:'available',label:'Available',n:AVAILABLE_TRIPS.length}]
     : [{id:'upcoming',label:'Upcoming',n:upcomingCount},{id:'available',label:'Available',n:AVAILABLE_TRIPS.length}];
@@ -846,17 +858,8 @@ function TripsTopTabs(){
   </div>`;
 }
 
-function screenTripsActive(){
-  const leg = LEGS[S.legIndex];
-  if(S.tripPhase==='checklistStart') return ChecklistScreen(true);
-  if(S.tripPhase==='checklistEnd') return ChecklistScreen(false);
-  const isLast = S.legIndex === LEGS.length-1;
-  return `
-  ${AppHeader()}
-  <div class="screen-scroll"><div class="screen-pad" style="padding-top:2px;">
-    ${TripsTopTabs()}
-    <p class="tiny muted" style="text-align:center;margin-bottom:6px;">Trailer</p>
-    <div style="text-align:center;margin-bottom:14px;">
+function TruckIllustration(){
+  return `<div style="text-align:center;margin-bottom:14px;">
       <svg width="180" height="90" viewBox="0 0 180 90" fill="none">
         <rect x="10" y="30" width="90" height="42" rx="4" fill="#22A559"/>
         <rect x="100" y="42" width="45" height="30" rx="3" fill="#F4F5F7" stroke="#C7CCD4"/>
@@ -865,8 +868,10 @@ function screenTripsActive(){
         <circle cx="120" cy="76" r="10" fill="#22262E"/><circle cx="120" cy="76" r="4" fill="#C7CCD4"/>
         <circle cx="140" cy="76" r="10" fill="#22262E"/><circle cx="140" cy="76" r="4" fill="#C7CCD4"/>
       </svg>
-    </div>
-    <div class="row" style="justify-content:space-around;margin-bottom:16px;">
+    </div>`;
+}
+function SosReportContactRow(){
+  return `<div class="row" style="justify-content:space-around;margin-bottom:16px;">
       <div style="text-align:center;cursor:pointer;" onclick="openModal('sos')">
         <div style="width:48px;height:48px;border-radius:50%;background:var(--danger-soft);color:var(--danger);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;">${ICONS.siren}</div>
         <span class="tiny" style="font-weight:700;">SOS</span>
@@ -879,7 +884,88 @@ function screenTripsActive(){
         <div style="width:48px;height:48px;border-radius:50%;background:var(--accent-soft);color:var(--accent-dark);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;">${ICONS.phoneIc}</div>
         <span class="tiny" style="font-weight:700;">Contact</span>
       </div>
-    </div>
+    </div>`;
+}
+
+function screenTripsActive(){
+  const leg = LEGS[S.legIndex];
+  const trip = AVAILABLE_TRIPS.find(t=>t.id===S.activeTripId);
+  const phase = S.tripPhase;
+
+  if(phase==='checklistStart' || phase==='legStartChecklist') return ChecklistScreen(true);
+  if(phase==='checklistEnd' || phase==='legEndChecklist') return ChecklistScreen(false);
+
+  if(phase==='preActive'){
+    return `
+    ${AppHeader()}
+    <div class="screen-scroll"><div class="screen-pad" style="padding-top:2px;">
+      ${TripsTopTabs()}
+      <div class="card" style="background:var(--accent-soft);border:none;">
+        <div class="row between"><p class="tiny muted" style="margin:0;">Trip ID</p><p style="font-weight:700;margin:0;font-size:12.5px;">${S.activeTripId}</p></div>
+        <p style="font-weight:800;font-size:22px;margin:6px 0 0;">${fmtINR(trip.earn)}</p>
+      </div>
+      <div class="card">
+        <div class="row gap10" style="align-items:flex-start;margin-bottom:12px;">
+          <div style="color:var(--accent);margin-top:1px;">${ICONS.truckTab}</div>
+          <div><p style="margin:0;font-weight:600;font-size:13px;">${trip.pickup.name}</p><p class="tiny muted" style="margin:1px 0;">${trip.pickup.addr}</p><p class="tiny" style="margin:0;">${ICONS.calendar} Reporting by <b>${trip.reportingBy}</b></p></div>
+        </div>
+        <div class="row gap10" style="align-items:flex-start;">
+          <div style="color:#B7791F;margin-top:1px;">${ICONS.warehouse}</div>
+          <div><p style="margin:0;font-weight:600;font-size:13px;">${trip.drop.name}</p><p class="tiny muted" style="margin:1px 0;">${trip.drop.addr}</p></div>
+        </div>
+      </div>
+      <div class="info-banner blue">${ICONS.shield} Reached the pickup point? Verify the OTP shared by the merchant to confirm and start the trip.</div>
+    </div></div>
+    <div class="screen-pad"><button class="btn btn-primary" onclick="startVerifyFlow()">Verify &amp; Start Trip</button></div>
+    ${TabBar()}`;
+  }
+
+  if(phase==='startCelebrate'){
+    return `
+    <div class="screen-scroll"><div class="screen-pad" style="padding-top:90px;text-align:center;position:relative;">
+      <svg width="220" height="160" viewBox="0 0 220 160" style="position:absolute;top:20px;left:50%;transform:translateX(-50%);pointer-events:none;">
+        ${['#0E9F6E','#F0A727','#3B82F6','#E5484D','#7C5CEE'].map((c,i)=>`<rect x="${20+i*38+ (i%2?8:0)}" y="${10+ (i%3)*20}" width="7" height="12" fill="${c}" transform="rotate(${(i*37)%360} ${23+i*38} ${16+(i%3)*20})"/>`).join('')}
+      </svg>
+      <div style="width:88px;height:88px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 22px;position:relative;">${ICONS.check}</div>
+      <h1>Trip Started!</h1>
+      <p class="muted small">All checks completed. You're all set. Drive safe!</p>
+    </div></div>
+    <div class="screen-pad"><button class="btn btn-primary" onclick="goActiveDriving()">Go to Active Trips</button></div>`;
+  }
+
+  if(phase==='ending'){
+    return `
+    ${AppHeader()}
+    <div class="screen-scroll"><div class="screen-pad" style="padding-top:2px;">
+      ${TripsTopTabs()}
+      <p class="tiny muted" style="text-align:center;margin-bottom:6px;">Trailer</p>
+      ${TruckIllustration()}
+      ${SosReportContactRow()}
+      <div class="card">
+        <div class="row between" style="margin-bottom:12px;">
+          <div><p class="tiny muted" style="margin:0;">Trip ID</p><p style="font-weight:800;margin:1px 0 0;font-size:13px;">${S.activeTripId}</p></div>
+          <span class="pill green">In Progress</span>
+        </div>
+        <div class="row gap10" style="align-items:flex-start;margin-bottom:12px;">
+          <div style="color:#B7791F;margin-top:1px;">${ICONS[leg.to.icon]}</div>
+          <div><p style="margin:0;font-weight:600;font-size:13px;">${leg.to.name}</p><p class="tiny muted" style="margin:1px 0 0;">${leg.to.addr}</p></div>
+        </div>
+        <p class="small" style="margin:0 0 12px;color:var(--accent-dark);font-weight:700;">${ICONS.compass} You have reached your destination</p>
+        <button class="btn btn-primary" onclick="beginFinalChecklist()">End Trip</button>
+      </div>
+    </div></div>
+    ${TabBar()}`;
+  }
+
+  // inProgress (driving)
+  const isLast = S.legIndex === LEGS.length-1;
+  return `
+  ${AppHeader()}
+  <div class="screen-scroll"><div class="screen-pad" style="padding-top:2px;">
+    ${TripsTopTabs()}
+    <p class="tiny muted" style="text-align:center;margin-bottom:6px;">Trailer</p>
+    ${TruckIllustration()}
+    ${SosReportContactRow()}
     <div class="card">
       <div class="row between" style="margin-bottom:12px;">
         <div><p class="tiny muted" style="margin:0;">Trip ID</p><p style="font-weight:800;margin:1px 0 0;font-size:13px;">${S.activeTripId}</p></div>
@@ -896,7 +982,7 @@ function screenTripsActive(){
       <p class="small muted" style="margin:0 0 12px;">${ICONS.compass} <b style="color:#171A21">${leg.kmLeft}KM</b> left to destination · leg ${S.legIndex+1} of ${LEGS.length}</p>
       <button class="btn btn-outline" style="margin-bottom:10px;">${ICONS.compass} Navigate on Google Map</button>
       ${ isLast
-        ? `<button class="btn btn-primary" onclick="openModal('endConfirm')">Slide to End Trip</button>`
+        ? `<button class="btn btn-primary" onclick="reachDestination()">I've Reached the Destination</button>`
         : `<button class="btn btn-dark" onclick="openModal('otpLeg')">Verify &amp; Continue to Next Leg</button>` }
     </div>
   </div></div>
@@ -904,13 +990,13 @@ function screenTripsActive(){
 }
 
 function ChecklistScreen(isStart){
-  const list = isStart ? START_CHECKLIST : END_CHECKLIST;
+  const list = isStart ? (S.startKind==='short' ? SHORT_START_CHECKLIST : START_CHECKLIST) : END_CHECKLIST;
   const step = isStart ? S.startStep : S.endStep;
   const isDeclare = step === list.length-1;
   const item = list[step];
   const declared = isStart ? S.declareStart : S.declareEnd;
   return `
-  ${BackHeader(isStart?'Start Trip Checklists':'End Trip Checklists', step===0 ? "openModal(null)" : (isStart?"prevStartStep()":"prevEndStep()"))}
+  ${BackHeader(isStart?'Start Trip Checklists':'End Trip Checklists', isStart?'prevStartStep()':'prevEndStep()')}
   <div class="screen-scroll"><div class="screen-pad">
     <div class="stepper">
       ${list.map((it,i)=>`
@@ -950,15 +1036,32 @@ function toggleDeclare(isStart){
   if(isStart) S.declareStart = !S.declareStart; else S.declareEnd = !S.declareEnd;
   render();
 }
-function prevStartStep(){ if(S.startStep>0) set({startStep:S.startStep-1}); else set({tripPhase:'preActive'}); }
-function nextStartStep(){
-  if(S.startStep < START_CHECKLIST.length-1) set({startStep:S.startStep+1});
-  else { set({tripPhase:'inProgress', tripsView:'active', legIndex:0}); showToast('Trip started — drive safe!'); }
+function prevStartStep(){
+  if(S.startStep>0){ set({startStep:S.startStep-1}); return; }
+  set(S.startKind==='short' ? {tripPhase:'inProgress'} : {tripPhase:'preActive'});
 }
-function prevEndStep(){ if(S.endStep>0) set({endStep:S.endStep-1}); else set({tripPhase:'inProgress'}); }
+function nextStartStep(){
+  const list = S.startKind==='short' ? SHORT_START_CHECKLIST : START_CHECKLIST;
+  if(S.startStep < list.length-1){ set({startStep:S.startStep+1}); return; }
+  if(S.startKind==='short'){
+    set({tripPhase:'inProgress', legIndex:S.legIndex+1, startStep:0, declareStart:false});
+    showToast('Trip resumed — drive safe!');
+  } else {
+    set({tripPhase:'startCelebrate'});
+  }
+}
+function prevEndStep(){
+  if(S.endStep>0){ set({endStep:S.endStep-1}); return; }
+  set(S.endKind==='leg' ? {tripPhase:'inProgress'} : {tripPhase:'ending'});
+}
 function nextEndStep(){
-  if(S.endStep < END_CHECKLIST.length-1) set({endStep:S.endStep+1});
-  else openModal('endConfirm');
+  if(S.endStep < END_CHECKLIST.length-1){ set({endStep:S.endStep+1}); return; }
+  if(S.endKind==='leg'){
+    set({tripPhase:'legStartChecklist', startKind:'short', startStep:0, declareStart:false});
+    showToast('Handover complete — continuing to next leg.');
+  } else {
+    openModal('endConfirm');
+  }
 }
 
 /* ---------------- Trips actions ---------------- */
@@ -967,18 +1070,21 @@ function acceptTrip(id){
   set({modal:null, activeTripId:id, tripPhase:'accepted', tripsView:'upcoming'});
   showToast('Trip added to your upcoming list.');
 }
+function goToActive(){ set({tripPhase:'preActive', tripsView:'active'}); }
 function cancelTripConfirmed(){
   set({modal:null, tripPhase:'none', tripsView:'available'});
   showToast('Trip cancelled.');
 }
 function startVerifyFlow(){ set({modal:'otpStart', otpValue:''}); }
 function submitOtpStart(){
-  set({modal:null, tripPhase:'checklistStart', tripsView:'active', startStep:0, declareStart:false});
+  set({modal:null, tripPhase:'checklistStart', startKind:'full', tripsView:'active', startStep:0, declareStart:false});
 }
+function goActiveDriving(){ set({tripPhase:'inProgress', tripsView:'active', legIndex:0}); }
 function submitOtpLeg(){
-  set({modal:null, legIndex:S.legIndex+1});
-  showToast('Leg verified — continue to next stop.');
+  set({modal:null, tripPhase:'legEndChecklist', endKind:'leg', endStep:0, declareEnd:false});
 }
+function reachDestination(){ set({tripPhase:'ending'}); }
+function beginFinalChecklist(){ set({tripPhase:'checklistEnd', endKind:'final', endStep:0, declareEnd:false}); }
 function endTripConfirmed(){
   set({modal:'tripCompleted', tripPhase:'completed'});
 }
@@ -1040,7 +1146,7 @@ function screenProfileMain(){
     {icon:'fileUpload', title:'KYC Documents', sub:'Upload Aadhaar or Voter ID photo/scan', tag: S.certified?null:'Upload Needed', go:'kyc'},
   ];
   const prefs = [
-    {icon:'bell', title:'Notifications', sub:'Notifications are turned on', tag:'Enabled', go:null},
+    {icon:'bell', title:'Notifications', sub: S.notifEnabled?'Notifications are turned on':'Notifications are turned off', tag: S.notifEnabled?'Enabled':null, go:'notifSettings'},
     {icon:'globe', title:'App Language', sub:'English (Selected)', go:null},
   ];
   const support = [
@@ -1172,6 +1278,21 @@ function screenProfileHelp(){
   <div class="screen-pad"><button class="btn btn-primary" onclick="showToast('Connecting you to support…')">Call Support</button></div>`;
 }
 
+function screenProfileNotifSettings(){
+  return `${BackHeader('Notifications',"set({profileSub:null})")}
+  <div class="screen-scroll"><div class="screen-pad">
+    <div class="card row between">
+      <div style="flex:1;"><p style="font-weight:800;margin:0;">Enable Notifications</p><p class="small muted" style="margin:4px 0 0;">Notifications are currently ${S.notifEnabled?'enabled':'disabled'}. You will ${S.notifEnabled?'receive real-time alerts.':'not receive real-time alerts.'}</p></div>
+      <div onclick="toggleNotif()" style="width:46px;height:27px;border-radius:20px;background:${S.notifEnabled?'var(--accent)':'#D8DCE2'};position:relative;cursor:pointer;flex:0 0 auto;margin-left:12px;transition:background .15s;">
+        <div style="position:absolute;top:2.5px;left:${S.notifEnabled?'21px':'3px'};width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .15s;display:flex;align-items:center;justify-content:center;color:var(--accent);">${S.notifEnabled?ICONS.check:''}</div>
+      </div>
+    </div>
+    <div class="info-banner green" style="margin-top:12px;">You will receive trip requests, payout updates, incentives, and safety notices directly on your device.</div>
+  </div></div>
+  <div class="screen-pad"><button class="btn btn-primary" onclick="showToast('Preference saved'); set({profileSub:null})">Save Preference</button></div>`;
+}
+function toggleNotif(){ set({notifEnabled:!S.notifEnabled}); }
+
 /* ---------------- Modals ---------------- */
 function openModal(name){ set({modal:name}); }
 function closeModal(){ set({modal:null}); }
@@ -1180,6 +1301,7 @@ function ModalRoot(){
   if(!S.modal) return '';
   const map = {
     certRequired: ModalCertRequired,
+    certCelebrate: ModalCertCelebrate,
     tripDetailsAvailable: ModalTripDetails,
     otpStart: ()=>ModalOtp('Verify & start trip','Enter the 6-digit OTP shared by the merchant to confirm and start the trip.','submitOtpStart()'),
     otpLeg: ()=>ModalOtp('Verify arrival','Enter the 6-digit OTP shared by the hub coordinator to confirm handover and continue.','submitOtpLeg()'),
@@ -1218,9 +1340,29 @@ function ModalCertRequired(){
   </div></div>`;
 }
 
+function ModalCertCelebrate(){
+  return `<div class="overlay"><div class="sheet" style="text-align:center;">
+    <div class="hero-illustration" style="padding:22px 0;">
+      <svg width="130" height="130" viewBox="0 0 130 130" fill="none">
+        <path d="M20 30 L28 100 L45 88 L52 108 L65 60Z" fill="#E8B923"/>
+        <path d="M110 30 L102 100 L85 88 L78 108 L65 60Z" fill="#E8B923"/>
+        <circle cx="65" cy="55" r="34" fill="#F3C63D" stroke="#D9A61C" stroke-width="3"/>
+        <circle cx="65" cy="55" r="26" fill="#fff"/>
+        <circle cx="65" cy="55" r="16" fill="var(--accent)"/>
+        <path d="M58 55l5 5 10-10" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M65 12 L70 22 L65 20 L60 22Z" fill="#E8B923"/>
+      </svg>
+    </div>
+    <p style="font-weight:800;font-size:13px;color:var(--accent-dark);letter-spacing:.04em;text-transform:uppercase;margin:0;">GoBhola Certified Driver</p>
+    <h1 style="margin-top:6px;">You are officially<br>GoBhola certified!</h1>
+    <p class="muted small">Your training has been successfully completed. You can now accept trips and start earning with GoBhola.</p>
+    <button class="btn btn-primary" style="margin-top:6px;" onclick="closeModal(); set({screen:'home',tab:'trips',tripsView:'available'})">Start exploring trips</button>
+  </div></div>`;
+}
+
 function ModalTripDetails(){
   const trip = AVAILABLE_TRIPS.find(t=>t.id===S.detailTripId) || AVAILABLE_TRIPS[0];
-  const canCancel = S.tripPhase==='accepted' && trip.id===S.activeTripId;
+  const canCancel = ['accepted','preActive'].includes(S.tripPhase) && trip.id===S.activeTripId;
   const showAccept = S.tripPhase!=='accepted' || trip.id!==S.activeTripId;
   return `<div class="overlay"><div class="sheet">
     <div class="sheet-grabber"></div>
@@ -1360,7 +1502,12 @@ function ModalContact(){
     </div>`;
   return `<div class="overlay center"><div class="sheet pop">
     ${BackHeader('Contact','closeModal()')}
-    <p class="tiny" style="color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin:6px 0 4px;">GoBhola Support</p>
+    <p class="tiny" style="color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin:6px 0 4px;">Trip Contacts</p>
+    <p class="tiny muted" style="margin:-2px 0 4px;">People directly involved in this trip</p>
+    <div class="card" style="padding:2px 14px;margin-bottom:2px;">
+      ${Row('user','var(--accent-soft)','var(--accent-dark)','Pickup Contact',`${PICKUP_CONTACT.name} • ${PICKUP_CONTACT.role}`,PICKUP_CONTACT.phone)}
+    </div>
+    <p class="tiny" style="color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin:16px 0 4px;">GoBhola Support</p>
     <div class="card" style="padding:2px 14px;">
       ${Row('headset','#EAF1FE','#3B82F6','Support Team (24×7)','Our team is always here to help','+91 1800 123 4567')}
       <div class="divider" style="margin:0;"></div>
@@ -1423,6 +1570,7 @@ function renderScreenInner(){
       if(S.profileSub==='address') return screenProfileAddress();
       if(S.profileSub==='kyc') return screenProfileKyc();
       if(S.profileSub==='help') return screenProfileHelp();
+      if(S.profileSub==='notifSettings') return screenProfileNotifSettings();
       return screenProfileMain();
     }
   }
@@ -1458,7 +1606,8 @@ function renderTopbar(){
 
 function resetAll(){ S = initialState(); render(); }
 function setCertified(v){
-  set({certified:v});
+  const justCertified = v && !S.certified;
+  set({certified:v, modal: justCertified ? 'certCelebrate' : S.modal});
 }
 
 /* ---------------- Control Panel ---------------- */
@@ -1484,6 +1633,9 @@ function renderPanel(){
       <div class="state-readout">
         <b>${S.certified?'✅ Certified driver':'🕓 Verification pending'}</b><br>
         Gates the Trips accept flow, Earnings data and the Profile badge everywhere in the app.
+      </div>
+      <div class="nav-grid c1" style="margin-top:8px;">
+        ${NavBtn('Certification-complete celebration', S.modal==='certCelebrate', "openModal('certCelebrate')", 'Laurel badge shown the moment a driver gets certified')}
       </div>
       <button class="btn-reset" onclick="resetAll()">↺ Reset entire prototype</button>
     </div>
@@ -1514,18 +1666,23 @@ function renderPanel(){
     <div class="panel-section">
       <p class="panel-eyebrow">Trips Lifecycle <span class="cnt">${tripLabel(trip)}</span></p>
       <div class="nav-grid c1">
-        ${NavBtn('Browse Available Trips', isHome && S.tab==='trips' && S.tripsView==='available', "set({screen:'home',tab:'trips',tripsView:'available'})", S.certified?'Live list · locked-window demo included':'Locked state for unverified drivers')}
-        ${NavBtn('Trip Details sheet', S.modal==='tripDetailsAvailable', "openDetail(AVAILABLE_TRIPS[0].id); set({screen:'home',tab:'trips'})", 'Accept / Cancel actions live here')}
-        ${NavBtn('Accept trip → Upcoming', trip==='accepted', "set({screen:'home',tab:'trips',tripsView:'upcoming',tripPhase:'accepted',activeTripId:AVAILABLE_TRIPS[0].id,modal:null})", 'Upcoming tab, trip pending start')}
-        ${NavBtn('Verify & Start OTP', S.modal==='otpStart', "set({screen:'home',tab:'trips',tripsView:'upcoming',tripPhase:'accepted'}); openModal('otpStart')", '6-digit OTP sheet')}
-        ${NavBtn('Start Trip Checklist', trip==='checklistStart', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'checklistStart',startStep:0,modal:null})", '6-step wizard incl. declaration')}
-        ${NavBtn('Active — In Progress', trip==='inProgress', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'inProgress',legIndex:0,modal:null})", 'Truck view · SOS / Report / Contact')}
-        ${NavBtn('Verify next leg (OTP)', S.modal==='otpLeg', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'inProgress',legIndex:0}); openModal('otpLeg')", 'Hub-to-hub handover OTP')}
-        ${NavBtn('Final leg → End Trip', trip==='inProgress' && S.legIndex===LEGS.length-1, "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'inProgress',legIndex:LEGS.length-1,modal:null})", 'Slide-to-end button appears')}
-        ${NavBtn('End Trip Checklist', trip==='checklistEnd', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'checklistEnd',endStep:0,modal:null})", '4-step incl. photo proof')}
-        ${NavBtn('End Trip confirm', S.modal==='endConfirm', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'inProgress'}); openModal('endConfirm')", 'Slide to end · manager call')}
-        ${NavBtn('Trip Completed', S.modal==='tripCompleted', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'completed'}); openModal('tripCompleted')", 'Earnings summary popup')}
-        ${NavBtn('Cancel Trip sheet', S.modal==='cancelTrip', "set({screen:'home',tab:'trips',tripsView:'upcoming',tripPhase:'accepted'}); openModal('cancelTrip')", 'Slide-to-cancel · pre-start only')}
+        ${NavBtn('1 · Browse Available Trips', isHome && S.tab==='trips' && S.tripsView==='available', "set({screen:'home',tab:'trips',tripsView:'available'})", S.certified?'Live list · locked-window demo included':'Locked state for unverified drivers')}
+        ${NavBtn('2 · Trip Details sheet', S.modal==='tripDetailsAvailable', "openDetail(AVAILABLE_TRIPS[0].id); set({screen:'home',tab:'trips'})", 'Accept / Cancel actions live here')}
+        ${NavBtn('3 · Accepted → Upcoming tab', trip==='accepted', "set({screen:'home',tab:'trips',tripsView:'upcoming',tripPhase:'accepted',activeTripId:AVAILABLE_TRIPS[0].id,modal:null})", 'Tap "Trip Accepted →" to promote it to Active')}
+        ${NavBtn('4 · Promoted to Active tab', trip==='preActive', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'preActive',modal:null})", '3-tab layout · "Verify & Start Trip" button')}
+        ${NavBtn('5 · Verify & Start OTP', S.modal==='otpStart', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'preActive'}); openModal('otpStart')", '6-digit OTP sheet')}
+        ${NavBtn('6 · Start Trip Checklist (6-step)', trip==='checklistStart', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'checklistStart',startKind:'full',startStep:0,modal:null})", 'Vehicle, tyres, docs, fuel, photos, declaration')}
+        ${NavBtn('7 · "Trip Started!" celebration', trip==='startCelebrate', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'startCelebrate',modal:null})", 'Confetti full-screen moment')}
+        ${NavBtn('8 · Active — driving (leg 1)', trip==='inProgress' && S.legIndex===0, "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'inProgress',legIndex:0,modal:null})", 'Truck view · SOS / Report / Contact')}
+        ${NavBtn('9 · Verify hub arrival (OTP)', S.modal==='otpLeg', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'inProgress',legIndex:0}); openModal('otpLeg')", 'Shown on every non-final leg')}
+        ${NavBtn('10 · Leg-end checklist (4-step)', trip==='legEndChecklist', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'legEndChecklist',endKind:'leg',endStep:0,modal:null})", 'Closes out the leg just finished')}
+        ${NavBtn('11 · Leg-start checklist (4-step)', trip==='legStartChecklist', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'legStartChecklist',startKind:'short',startStep:0,modal:null})", 'Shorter re-check before the next leg')}
+        ${NavBtn('12 · Active — driving (leg 2/3)', trip==='inProgress' && S.legIndex>0, "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'inProgress',legIndex:1,modal:null})")}
+        ${NavBtn('13 · Reached destination', trip==='ending', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'ending',legIndex:LEGS.length-1,modal:null})", '"End Trip" tap button appears')}
+        ${NavBtn('14 · Final End Trip Checklist', trip==='checklistEnd', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'checklistEnd',endKind:'final',endStep:0,modal:null})", 'Odometer, condition, handover photo, declaration')}
+        ${NavBtn('15 · "End Trip?" slide confirm', S.modal==='endConfirm', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'checklistEnd',endKind:'final'}); openModal('endConfirm')", 'Slide to end · manager call')}
+        ${NavBtn('16 · Trip Completed summary', S.modal==='tripCompleted', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'completed'}); openModal('tripCompleted')", 'Earnings summary popup')}
+        ${NavBtn('Cancel Trip sheet', S.modal==='cancelTrip', "set({screen:'home',tab:'trips',tripsView:'upcoming',tripPhase:'accepted'}); openModal('cancelTrip')", 'Slide-to-cancel · only before trip starts')}
         ${NavBtn('Upcoming — empty state', isHome && S.tab==='trips' && S.tripsView==='upcoming' && trip==='none', "set({screen:'home',tab:'trips',tripsView:'upcoming',tripPhase:'none',modal:null})")}
       </div>
     </div>
@@ -1557,6 +1714,7 @@ function renderPanel(){
         ${NavBtn('Address', S.profileSub==='address', "set({screen:'home',tab:'profile',profileSub:'address'})")}
         ${NavBtn('KYC Documents', S.profileSub==='kyc', "set({screen:'home',tab:'profile',profileSub:'kyc'})")}
         ${NavBtn('Help & Support', S.profileSub==='help', "set({screen:'home',tab:'profile',profileSub:'help'})")}
+        ${NavBtn('Notification Settings', S.profileSub==='notifSettings', "set({screen:'home',tab:'profile',profileSub:'notifSettings'})")}
         ${NavBtn('Logout confirm', S.modal==='logout', "openModal('logout')")}
       </div>
     </div>
@@ -1565,7 +1723,7 @@ function renderPanel(){
   `;
 }
 function tripLabel(p){
-  return {none:'No trip',accepted:'Accepted',preActive:'Pre-active',checklistStart:'Start checklist',inProgress:'In progress',checklistEnd:'End checklist',completed:'Completed'}[p]||p;
+  return {none:'No trip',accepted:'Accepted',preActive:'Pre-active',checklistStart:'Start checklist',startCelebrate:'Trip started!',inProgress:`Driving · leg ${S.legIndex+1}/${LEGS.length}`,legEndChecklist:'Leg-end checklist',legStartChecklist:'Leg-start checklist',ending:'Reached destination',checklistEnd:'End checklist',completed:'Completed'}[p]||p;
 }
 
 render();
