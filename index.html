@@ -588,6 +588,7 @@ const initialState = () => ({
   declareEnd:false,
   detailTripId:null,       // which trip the Trip Details page is showing
   detailsFromView:'available', // which tripsView to return to on back
+  notificationsOpen:false, // full-page Notifications, pushed on top of whatever tab is active
   profileSub:null,
   dlFront:false,
   dlBack:false,
@@ -620,7 +621,7 @@ function addNotif(item){
 function AppHeader(){
   return `<div class="app-header">
     <div class="go-logo"><span class="g">Go</span>Bhola</div>
-    <div class="icon-btn" onclick="openModal('notifications')">${ICONS.bell}<span class="badge"></span></div>
+    <div class="icon-btn" onclick="openNotifications()">${ICONS.bell}<span class="badge"></span></div>
   </div>`;
 }
 function BackHeader(title, onBack){
@@ -940,8 +941,10 @@ function screenTripsAvailable(){
   ${AppHeader()}
   <div class="screen-scroll"><div class="screen-pad" style="padding-top:2px;">
     ${TripsTopTabs()}
-    ${AVAILABLE_TRIPS.map(t=>`<div style="position:relative;">${TripCard(t,'available')}</div>`).join('')}
-    ${S.certified && S.tripPhase!=='none' ? `<div style="text-align:center;margin-top:4px;"><span class="pill dark" style="cursor:pointer;" onclick="document.getElementById('phoneScreen').querySelector('.screen-scroll').scrollTo({top:9999,behavior:'smooth'})"><span style="display:inline-flex;transform:rotate(90deg);">${ICONS.chevron}</span> Next available trip</span></div>` : ''}
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      ${AVAILABLE_TRIPS.map(t=>`<div style="position:relative;">${TripCard(t,'available')}</div>`).join('')}
+    </div>
+    ${S.certified && S.tripPhase!=='none' ? `<div style="text-align:center;margin-top:14px;"><span class="pill dark" style="cursor:pointer;" onclick="document.getElementById('phoneScreen').querySelector('.screen-scroll').scrollTo({top:9999,behavior:'smooth'})"><span style="display:inline-flex;transform:rotate(90deg);">${ICONS.chevron}</span> Next available trip</span></div>` : ''}
   </div></div>
   ${TabBar()}`;
 }
@@ -1423,6 +1426,8 @@ function toggleNotif(){ set({notifEnabled:!S.notifEnabled}); }
 /* ---------------- Modals ---------------- */
 function openModal(name){ set({modal:name}); }
 function closeModal(){ set({modal:null}); }
+function openNotifications(){ set({notificationsOpen:true, modal:null}); }
+function closeNotifications(){ set({notificationsOpen:false}); }
 
 function ModalRoot(){
   if(!S.modal) return '';
@@ -1440,7 +1445,6 @@ function ModalRoot(){
     sos: ModalSos,
     report: ModalReport,
     contact: ModalContact,
-    notifications: ModalNotifications,
     logout: ModalLogout,
   };
   return map[S.modal] ? map[S.modal]() : '';
@@ -1738,9 +1742,10 @@ function ModalContact(){
   </div></div>`;
 }
 
-function ModalNotifications(){
-  return `<div class="overlay center"><div class="sheet pop">
-    ${BackHeader('Notifications','closeModal()')}
+function screenNotifications(){
+  return `
+  ${BackHeader('Notifications', 'closeNotifications()')}
+  <div class="screen-scroll"><div class="screen-pad">
     <div class="stack" style="margin-top:6px;">
     ${S.notifFeed.map(n=>NotifCard(n)).join('')}
     </div>
@@ -1813,13 +1818,12 @@ function renderScreenInner(){
 }
 
 function render(){
-  const withChrome = S.screen!=='mobile' || true;
   document.getElementById('phoneScreen').innerHTML = `
     <div class="phone-notch"></div>
     ${StatusBar()}
-    ${renderScreenInner()}
+    ${S.notificationsOpen ? screenNotifications() : renderScreenInner()}
     ${S.toast ? `<div class="toast">${S.toast}</div>` : ''}
-    ${ModalRoot()}
+    ${S.notificationsOpen ? '' : ModalRoot()}
   `;
   renderPanel();
   renderTopbar();
@@ -1835,6 +1839,7 @@ function renderTopbar(){
     if(S.tab==='trips') parts.push('View: ' + S.tripsView[0].toUpperCase()+S.tripsView.slice(1));
     if(S.tab==='profile' && S.profileSub) parts.push(S.profileSub);
   }
+  if(S.notificationsOpen) parts.push('Notifications');
   if(S.modal) parts.push('Modal: '+S.modal);
   document.getElementById('stageTopbar').innerHTML = parts.map((p,i)=>i===0?`<b>${p}</b>`:`<span class="sep">/</span>${p}`).join(' ');
 }
@@ -1948,7 +1953,7 @@ function renderPanel(){
         ${NavBtn('Emergency SOS', S.modal==='sos', "openModal('sos')", null,'warn')}
         ${NavBtn('Report Issue', S.modal==='report', "openModal('report')")}
         ${NavBtn('Contact', S.modal==='contact', "openModal('contact')")}
-        ${NavBtn('Notifications', S.modal==='notifications', "openModal('notifications')")}
+        ${NavBtn('Notifications', S.notificationsOpen, "openNotifications()")}
       </div>
     </div>
 
