@@ -501,6 +501,10 @@ const ICONS = {
 
 function fmtINR(n){ return '₹ ' + Number(n).toLocaleString('en-IN'); }
 function dropIconColor(stop){ return stop.color==='red' ? 'var(--danger)' : '#B7791F'; }
+function isHubPickup(tripId){
+  const trip = AVAILABLE_TRIPS.find(t=>t.id===tripId);
+  return !!trip && trip.pickup.icon === 'warehouse';
+}
 
 /* ---------------- Mock data ---------------- */
 const DRIVER = {
@@ -1273,12 +1277,12 @@ function toggleDeclare(isStart){
 }
 function prevStartStep(){
   if(S.startStep>0){ set({startStep:S.startStep-1}); return; }
-  set(S.startKind==='short' ? {tripPhase:'inProgress'} : {tripPhase:'preActive'});
+  set(S.tripPhase==='legStartChecklist' ? {tripPhase:'inProgress'} : {tripPhase:'preActive'});
 }
 function nextStartStep(){
   const list = S.startKind==='short' ? SHORT_START_CHECKLIST : START_CHECKLIST;
   if(S.startStep < list.length-1){ set({startStep:S.startStep+1}); return; }
-  if(S.startKind==='short'){
+  if(S.tripPhase==='legStartChecklist'){
     set({tripPhase:'inProgress', legIndex:S.legIndex+1, startStep:0, declareStart:false});
     showToast('Trip resumed — drive safe!');
   } else {
@@ -1315,7 +1319,8 @@ function cancelTripConfirmed(){
 }
 function startVerifyFlow(){ set({modal:'otpStart', otpValue:''}); }
 function submitOtpStart(){
-  set({modal:null, tripPhase:'checklistStart', startKind:'full', tripsView:'active', startStep:0, declareStart:false, checklistData:{}});
+  const startKind = isHubPickup(S.activeTripId) ? 'short' : 'full';
+  set({modal:null, tripPhase:'checklistStart', startKind, tripsView:'active', startStep:0, declareStart:false, checklistData:{}});
 }
 function goActiveDriving(){ set({tripPhase:'inProgress', tripsView:'active'}); }
 function submitOtpLeg(){
@@ -1548,7 +1553,9 @@ function ModalRoot(){
     certCelebrate: ModalCertCelebrate,
     welcomeBack: ModalWelcomeBack,
     welcomeNew: ModalWelcomeNew,
-    otpStart: ()=>ModalOtp('Verify & start trip','Enter the 6-digit OTP shared by the merchant to confirm and start the trip.','submitOtpStart()'),
+    otpStart: ()=>ModalOtp('Verify & start trip', isHubPickup(S.activeTripId)
+      ? 'Enter the 6-digit OTP shared by the Hub manager to confirm and start the trip.'
+      : 'Enter the 6-digit OTP shared by the merchant to confirm and start the trip.', 'submitOtpStart()'),
     otpLeg: ()=>ModalOtp('Verify arrival','Enter the 6-digit OTP shared by the hub coordinator to confirm handover and continue.','submitOtpLeg()'),
     cancelTrip: ModalCancelTrip,
     endConfirm: ModalEndConfirm,
@@ -2058,8 +2065,10 @@ function renderPanel(){
             <button class="${S.cancelWindowPassed?'active on':''}" onclick="set({cancelWindowPassed:true})">Passed</button>
           </div>
         </div>
-        ${NavBtn('5 · Verify & Start OTP', S.modal==='otpStart', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'preActive'}); openModal('otpStart')", '6-digit OTP sheet')}
-        ${NavBtn('6 · Start Trip Checklist (6-step)', trip==='checklistStart', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'checklistStart',startKind:'full',startStep:0,modal:null})", 'Vehicle, tyres, docs, fuel, photos, declaration')}
+        ${NavBtn('5 · Verify & Start OTP', S.modal==='otpStart' && !isHubPickup(S.activeTripId), "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'preActive',activeTripId:AVAILABLE_TRIPS[0].id}); openModal('otpStart')", '"Shared by the merchant" · client pickup trips')}
+        ${NavBtn('5b · Verify & Start OTP — hub pickup', S.modal==='otpStart' && isHubPickup(S.activeTripId), "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'preActive',activeTripId:AVAILABLE_TRIPS[1].id}); openModal('otpStart')", '"Shared by the Hub manager" · hub pickup trips')}
+        ${NavBtn('6 · Start Trip Checklist (6-step)', trip==='checklistStart' && S.startKind==='full', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'checklistStart',startKind:'full',startStep:0,activeTripId:AVAILABLE_TRIPS[0].id,legIndex:0,modal:null})", 'Client pickup trips · vehicle, cargo, fluids, tyres, docs, declaration')}
+        ${NavBtn('6b · Start Checklist — hub pickup (4-step)', trip==='checklistStart' && S.startKind==='short', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'checklistStart',startKind:'short',startStep:0,activeTripId:AVAILABLE_TRIPS[1].id,legIndex:1,modal:null})", 'Hub pickup trips · shrunk to vehicle, tyres, docs, declaration')}
         ${NavBtn('7 · "Trip Started!" celebration', trip==='startCelebrate', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'startCelebrate',modal:null})", 'Confetti full-screen moment')}
         ${NavBtn('8 · Active — driving (leg 1)', trip==='inProgress' && S.legIndex===0, "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'inProgress',legIndex:0,modal:null})", 'Truck view · SOS / Report / Contact')}
         ${NavBtn('9 · Verify hub arrival (OTP)', S.modal==='otpLeg', "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'inProgress',legIndex:0}); openModal('otpLeg')", 'Shown on every non-final leg')}
