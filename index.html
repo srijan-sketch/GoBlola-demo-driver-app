@@ -637,7 +637,9 @@ function TabBar(){
       ${t.icon}<span>${t.label}</span>
     </div>`).join('')}</div>`;
 }
-function switchTab(id){ set({tab:id, profileSub:null}); }
+function switchTab(id){
+  set({tab:id, profileSub:null, modal: (id==='earnings' && !S.certified) ? 'earningsCertRequired' : null});
+}
 
 function StatusBar(){
   return `<div class="statusbar"><span>9:41</span>
@@ -1247,8 +1249,9 @@ function screenEarnings(){
           </div>
         </div>`).join('')}
     </div>` : `
-    <div class="card" style="text-align:center;padding:26px 16px;">
-      <p class="small muted" style="margin:0;">Once you complete your first certified trip, it'll show up here.</p>
+    <div class="card" style="text-align:center;padding:34px 16px;">
+      <p style="font-weight:800;font-size:16px;margin:0 0 6px;">No trips completed yet</p>
+      <p class="small muted" style="margin:0;">Your completed trips will appear here once you finish your first trip with GoBhola.</p>
     </div>`}
   </div></div>
   ${TabBar()}`;
@@ -1418,6 +1421,7 @@ function ModalRoot(){
   if(!S.modal) return '';
   const map = {
     certRequired: ModalCertRequired,
+    earningsCertRequired: ModalEarningsCertRequired,
     certCelebrate: ModalCertCelebrate,
     welcomeBack: ModalWelcomeBack,
     welcomeNew: ModalWelcomeNew,
@@ -1454,9 +1458,8 @@ function VerificationSteps(current){
     }).join('')}
   </div>`;
 }
-function ModalCertRequired(){
-  return `<div class="overlay"><div class="sheet">
-    <div class="hero-illustration" style="padding:18px 0;">
+function VerifyIllustration(){
+  return `<div class="hero-illustration" style="padding:18px 0;">
       <svg width="120" height="90" viewBox="0 0 120 90" fill="none">
         <circle cx="60" cy="40" r="34" fill="#E6F7EF"/>
         <circle cx="45" cy="30" r="10" fill="#3A4150"/>
@@ -1465,9 +1468,22 @@ function ModalCertRequired(){
         <circle cx="80" cy="28" r="12" fill="#fff" stroke="#0E9F6E" stroke-width="3"/>
         <path d="M75 28l3 3 6-6" stroke="#0E9F6E" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-    </div>
+    </div>`;
+}
+function ModalCertRequired(){
+  return `<div class="overlay"><div class="sheet">
+    ${VerifyIllustration()}
     <h1 style="text-align:center;">Complete verification<br>to accept trips</h1>
     <p class="muted small" style="text-align:center;">Once your application is verified and you complete the training, you will be able to accept trips and start earning.</p>
+    ${VerificationSteps(S.verifySteps)}
+    <button class="btn btn-primary" style="margin-top:10px;" onclick="closeModal()">Got It</button>
+  </div></div>`;
+}
+function ModalEarningsCertRequired(){
+  return `<div class="overlay"><div class="sheet">
+    ${VerifyIllustration()}
+    <h1 style="text-align:center;">Start earning<br>with GoBhola</h1>
+    <p class="muted small" style="text-align:center;">Your earnings will appear here once you're verified and complete your first trip.</p>
     ${VerificationSteps(S.verifySteps)}
     <button class="btn btn-primary" style="margin-top:10px;" onclick="closeModal()">Got It</button>
   </div></div>`;
@@ -1919,7 +1935,8 @@ function renderPanel(){
     <div class="panel-section">
       <p class="panel-eyebrow">Earnings</p>
       <div class="nav-grid">
-        ${NavBtn('View Earnings Tab', isHome && S.tab==='earnings', "set({screen:'home',tab:'earnings'})", S.certified?'Full stats + history':'Zero state (₹0 everywhere)')}
+        ${NavBtn('View Earnings Tab', isHome && S.tab==='earnings' && !S.modal, "set({screen:'home',tab:'earnings',modal:null})", S.certified?'Full stats + history':'Zero state (₹0 everywhere)')}
+        ${NavBtn('"Start earning" drawer', S.modal==='earningsCertRequired', "set({screen:'home',tab:'earnings'}); openModal('earningsCertRequired')", 'Auto-opens on this tab while not certified')}
       </div>
       <p class="panel-hint">Toggle <b>Certification</b> above to switch this tab between the zero-state and the full stats + trip history view.</p>
     </div>
