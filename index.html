@@ -1161,8 +1161,8 @@ function screenTripsActive(){
     ${TabBar()}`;
   }
 
-  // inProgress (driving)
-  const isLast = S.legIndex === LEGS.length-1;
+  // inProgress (driving) — every accepted trip is its own single-leg job, so it always
+  // ends by reaching this leg's own destination, regardless of which trip type it is.
   return `
   ${AppHeader()}
   <div class="screen-scroll"><div class="screen-pad" style="padding-top:2px;">
@@ -1177,7 +1177,7 @@ function screenTripsActive(){
       </div>
       ${RouteTrack(leg.from, 'var(--accent-dark)', leg.kmLeft, leg.to, dropIconColor(leg.to))}
       <button class="btn btn-ghost" style="margin-bottom:10px;">Navigate on Google Map</button>
-      ${ isLast ? `<button class="btn btn-primary" onclick="reachDestination()">I've Reached the Destination</button>` : '' }
+      <button class="btn btn-primary" onclick="reachDestination()">I've Reached the Destination</button>
     </div>
   </div></div>
   ${TabBar()}`;
@@ -1303,7 +1303,10 @@ function nextEndStep(){
 function openDetail(id){ set({detailTripId:id, detailsFromView:S.tripsView, tripsView:'details', modal:null}); }
 function closeDetail(){ set({tripsView:S.detailsFromView}); }
 function acceptTrip(id){
-  set({modal:null, activeTripId:id, tripPhase:'accepted', tripsView:'upcoming', cancelWindowPassed:false});
+  // Each available trip is its own single-leg job — legIndex ties it to the matching
+  // Start-to-Hub / Hub-to-Hub / Hub-to-Delivery route in LEGS (same order as AVAILABLE_TRIPS).
+  const legIndex = AVAILABLE_TRIPS.findIndex(t=>t.id===id);
+  set({modal:null, activeTripId:id, legIndex, tripPhase:'accepted', tripsView:'upcoming', cancelWindowPassed:false});
   showToast('Trip added to your upcoming list.');
 }
 function cancelTripConfirmed(){
@@ -1314,7 +1317,7 @@ function startVerifyFlow(){ set({modal:'otpStart', otpValue:''}); }
 function submitOtpStart(){
   set({modal:null, tripPhase:'checklistStart', startKind:'full', tripsView:'active', startStep:0, declareStart:false, checklistData:{}});
 }
-function goActiveDriving(){ set({tripPhase:'inProgress', tripsView:'active', legIndex:0}); }
+function goActiveDriving(){ set({tripPhase:'inProgress', tripsView:'active'}); }
 function submitOtpLeg(){
   set({modal:null, tripPhase:'legEndChecklist', endKind:'leg', endStep:0, declareEnd:false});
 }
