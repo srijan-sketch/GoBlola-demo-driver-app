@@ -482,6 +482,13 @@ const DRIVER = {
   license:{number:'MH-02-2019-0048291', validTill:'24 Nov 2038', vehicleClass:'LMV - Commercial / Transport', rto:'MH-02 (Andheri, Mumbai)', exp:'3 - 5 Years', badge:'#MH-02-B-99812'},
 };
 
+// OCR-scanned details shown on the signup "Check your license details" step
+const SIGNUP_DL = {
+  name:'Rahul Kumar', dob:'03/05/1990', licenseNumber:'WB12 2018 1234567',
+  validTill:'28/6/2030', vehicleClasses:'LMV, MCWG', address:'12, MG Road, Kolkata, West Bengal 700001',
+  applicationNumber:'GB-1234567890',
+};
+
 const AVAILABLE_TRIPS = [
   { id:'TRIP-456874256', earn:3079, km:234, eta:'7h 24m', ratePerKm:18, reportingBy:'12/09/2026, 12:30 PM', handoverBy:'12/09/2026, 07:30 PM', handoverLabel:'Handover by',
     pickup:{name:'Amazon Transportation Services', addr:'Plot No. 5, Sector 63, Noida, Uttar Pradesh 201301'},
@@ -568,6 +575,9 @@ const initialState = () => ({
   declareEnd:false,
   detailTripId:null,       // which trip the details sheet is showing
   profileSub:null,
+  dlFront:false,
+  dlBack:false,
+  signupPhoto:false,
   notifEnabled:true,
   notifFeed: freshNotifFeed(),
   reportType:'Road Block',
@@ -684,34 +694,91 @@ function afterOtp(){
   if(!S.certified){ go('scanDL'); } else { go('welcome'); }
 }
 
-function screenScanDL(){
+function DLCardWireframe(kind){
+  // kind: 'front' | 'back' — plain outline placeholder so a driver recognizes which side to hold up
+  if(kind==='front'){
+    return `<svg viewBox="0 0 300 168" width="100%" style="display:block;"><rect x="1" y="1" width="298" height="166" rx="10" fill="#F7F8FA" stroke="#D7DBE1" stroke-width="1.5"/>
+      <rect x="18" y="20" width="58" height="70" rx="6" fill="#fff" stroke="#C7CCD4" stroke-width="1.5"/>
+      <circle cx="47" cy="46" r="14" fill="#E4E7EC"/><path d="M30 82c2-10 10-14 17-14s15 4 17 14" fill="#E4E7EC"/>
+      <rect x="90" y="24" width="130" height="9" rx="4" fill="#DCE0E6"/>
+      <rect x="90" y="42" width="170" height="7" rx="3.5" fill="#E4E7EC"/>
+      <rect x="90" y="56" width="150" height="7" rx="3.5" fill="#E4E7EC"/>
+      <rect x="90" y="70" width="110" height="7" rx="3.5" fill="#E4E7EC"/>
+      <rect x="18" y="110" width="264" height="6" rx="3" fill="#E9ECF0"/>
+      <rect x="18" y="124" width="200" height="6" rx="3" fill="#E9ECF0"/>
+      <path d="M215 140h50" stroke="#C7CCD4" stroke-width="1.5" stroke-dasharray="3 3"/>
+    </svg>`;
+  }
+  return `<svg viewBox="0 0 300 168" width="100%" style="display:block;"><rect x="1" y="1" width="298" height="166" rx="10" fill="#F7F8FA" stroke="#D7DBE1" stroke-width="1.5"/>
+    <rect x="18" y="20" width="264" height="6" rx="3" fill="#E4E7EC"/>
+    <rect x="18" y="34" width="220" height="6" rx="3" fill="#E4E7EC"/>
+    <rect x="18" y="48" width="240" height="6" rx="3" fill="#E4E7EC"/>
+    ${Array.from({length:16}).map((_,i)=>`<rect x="${20+i*16}" y="90" width="${i%3===0?7:4}" height="46" fill="#DCE0E6"/>`).join('')}
+    <rect x="18" y="146" width="130" height="7" rx="3.5" fill="#E9ECF0"/>
+  </svg>`;
+}
+function DLCardFilled(kind){
+  // kind: 'front' | 'back' — a stand-in for the photo the driver just captured
+  if(kind==='front'){
+    return `<svg viewBox="0 0 300 168" width="100%" style="display:block;"><rect x="1" y="1" width="298" height="166" rx="10" fill="#EEF6F1" stroke="#BFE0CC" stroke-width="1.5"/>
+      <rect x="1" y="1" width="298" height="30" rx="10" fill="var(--accent)"/><rect x="1" y="16" width="298" height="15" fill="var(--accent)"/>
+      <text x="150" y="20" text-anchor="middle" font-family="Manrope, sans-serif" font-size="11" font-weight="800" fill="#fff">UNION OF INDIA — DRIVING LICENCE</text>
+      <rect x="18" y="42" width="58" height="70" rx="6" fill="#fff" stroke="#BFE0CC" stroke-width="1.5"/>
+      <circle cx="47" cy="66" r="14" fill="#D7C6A6"/><path d="M30 104c2-10 10-14 17-14s15 4 17 14" fill="#8A6D3B"/>
+      <rect x="90" y="46" width="140" height="9" rx="4" fill="#22262E"/>
+      <rect x="90" y="64" width="170" height="7" rx="3.5" fill="#5B6472"/>
+      <rect x="90" y="78" width="150" height="7" rx="3.5" fill="#5B6472"/>
+      <rect x="90" y="92" width="110" height="7" rx="3.5" fill="#5B6472"/>
+      <rect x="18" y="122" width="264" height="6" rx="3" fill="#AFC9BA"/>
+      <rect x="18" y="136" width="200" height="6" rx="3" fill="#AFC9BA"/>
+      <path d="M215 152q25 -14 50 0" stroke="#4A5560" stroke-width="1.6" fill="none"/>
+    </svg>`;
+  }
+  return `<svg viewBox="0 0 300 168" width="100%" style="display:block;"><rect x="1" y="1" width="298" height="166" rx="10" fill="#EEF6F1" stroke="#BFE0CC" stroke-width="1.5"/>
+    <rect x="18" y="18" width="264" height="6" rx="3" fill="#5B6472"/>
+    <rect x="18" y="32" width="220" height="6" rx="3" fill="#8A93A0"/>
+    <rect x="18" y="46" width="240" height="6" rx="3" fill="#8A93A0"/>
+    <rect x="200" y="16" width="66" height="66" fill="#22262E"/>
+    ${Array.from({length:5}).map((_,r)=>Array.from({length:5}).map((_,c)=>(r+c)%2? `<rect x="${206+c*11}" y="${22+r*11}" width="9" height="9" fill="#fff"/>`:'').join('')).join('')}
+    ${Array.from({length:16}).map((_,i)=>`<rect x="${20+i*16}" y="98" width="${i%3===0?7:4}" height="46" fill="#22262E"/>`).join('')}
+    <rect x="18" y="150" width="130" height="7" rx="3.5" fill="#5B6472"/>
+  </svg>`;
+}
+function DLUploadCard(side){
+  const done = side==='front' ? S.dlFront : S.dlBack;
+  const label = side==='front' ? 'Front Side' : 'Back Side';
   return `
-  ${BackHeader('Upload Licence', "go('otp')")}
+  <div class="card" style="padding:12px;margin-top:${side==='front'?16:12}px;cursor:pointer;${done?'border-color:var(--accent);':''}" onclick="set({dl${side==='front'?'Front':'Back'}:true})">
+    ${done ? DLCardFilled(side) : DLCardWireframe(side)}
+    <p style="text-align:center;font-weight:700;color:var(--accent-dark);margin:12px 0 0;">${done?'Change':'Upload'} ${label}</p>
+  </div>`;
+}
+function screenScanDL(){
+  const canContinue = S.dlFront && S.dlBack;
+  return `
+  ${BackHeader('', "go('otp')")}
   <div class="screen-scroll"><div class="screen-pad">
-    <p class="muted small">Scan or upload both sides of your Driving Licence to verify your identity.</p>
-    <div class="card" style="text-align:center;padding:34px 16px;margin-top:16px;border-style:dashed;border-color:#CBD5E1;">
-      <div style="color:#9CA3AF;">${ICONS.camera}</div>
-      <p style="font-weight:700;margin:10px 0 2px;">Front Side</p>
-      <p class="tiny muted">Tap to capture or upload</p>
+    <h1 style="margin-top:2px;">Upload your Driving Licence</h1>
+    <p class="muted small" style="margin-top:0;">Take a photo of both sides. We use it only to confirm who you are.</p>
+    ${DLUploadCard('front')}
+    ${DLUploadCard('back')}
+    <div class="stack" style="margin:16px 0 4px;">
+      <div class="row gap8 small"><span style="color:var(--accent)">${ICONS.check}</span>Make sure all details are clear</div>
+      <div class="row gap8 small"><span style="color:var(--accent)">${ICONS.check}</span>Good lighting, no glare</div>
+      <div class="row gap8 small"><span style="color:var(--accent)">${ICONS.check}</span>JPG, PNG or PDF (Max 5MB)</div>
     </div>
-    <div class="card" style="text-align:center;padding:34px 16px;border-style:dashed;border-color:#CBD5E1;">
-      <div style="color:#9CA3AF;">${ICONS.camera}</div>
-      <p style="font-weight:700;margin:10px 0 2px;">Back Side</p>
-      <p class="tiny muted">Tap to capture or upload</p>
-    </div>
-    <div class="info-banner blue" style="margin-top:14px;">${ICONS.shield} Your documents are encrypted and verified securely via the SARATHI National Transport Registry.</div>
   </div></div>
-  <div class="screen-pad"><button class="btn btn-primary" onclick="go('dlVerify')">Continue</button></div>`;
+  <div class="screen-pad"><button class="btn btn-primary" ${canContinue?'':'disabled'} onclick="go('dlVerify')">Continue</button></div>`;
 }
 
 function screenDlVerify(){
   return `
-  <div class="screen-scroll"><div class="screen-pad" style="padding-top:60px;text-align:center;">
+  <div class="screen-scroll"><div class="screen-pad" style="padding-top:110px;text-align:center;">
     <div style="width:84px;height:84px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;margin:0 auto 22px;color:var(--accent);">
       <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7"/></svg>
     </div>
-    <h1>Verifying your licence…</h1>
-    <p class="muted small">Hang tight, we're cross-checking your details with the national registry. This usually takes a few seconds.</p>
+    <h1>Verifying…</h1>
+    <p class="muted small">We are verifying and fetching your information. This will take some time.</p>
   </div></div>
   <div class="screen-pad"><button class="btn btn-primary" onclick="go('reviewInfo')">Continue</button></div>`;
 }
@@ -732,10 +799,26 @@ function AddressForm(){
 }
 
 function screenReviewInfo(){
+  const d = SIGNUP_DL;
   return `
-  ${BackHeader('Review Information', "go('scanDL')")}
-  <div class="screen-scroll"><div class="screen-pad">${AddressForm()}</div></div>
-  <div class="screen-pad"><button class="btn btn-primary" onclick="go('appSubmitted')">Submit Application</button></div>`;
+  ${BackHeader('', "go('scanDL')")}
+  <div class="screen-scroll"><div class="screen-pad">
+    <h1 style="margin-top:2px;">Check your license details</h1>
+    <p class="muted small" style="margin-top:0;">We have scanned your driving license. Please review the details below and correct anything that is not right.</p>
+    <div style="text-align:center;margin:8px 0 18px;">
+      <div style="width:88px;height:88px;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;background:${S.signupPhoto?'linear-gradient(155deg,#D7C6A6,#8A6D3B)':'#EEF0F3'};" onclick="set({signupPhoto:true})">
+        ${S.signupPhoto ? `<svg width="52" height="52" viewBox="0 0 24 24" fill="#fff" opacity=".9"><circle cx="12" cy="9" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6z"/></svg>` : `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>`}
+      </div>
+      <p style="text-align:center;font-weight:700;color:var(--accent-dark);margin:10px 0 0;cursor:pointer;" onclick="set({signupPhoto:true})">${S.signupPhoto?'Change Photo':'Upload Photo'}</p>
+    </div>
+    <div class="field"><label>Name</label><input value="${d.name}"></div>
+    <div class="field"><label>Date of Birth</label><input value="${d.dob}"></div>
+    <div class="field"><label>Driving License Number</label><input value="${d.licenseNumber}"></div>
+    <div class="field"><label>Valid Till</label><input value="${d.validTill}"></div>
+    <div class="field"><label>Vehicle Classes</label><input value="${d.vehicleClasses}"></div>
+    <div class="field"><label>Address</label><input value="${d.address}"></div>
+  </div></div>
+  <div class="screen-pad"><button class="btn btn-primary" ${S.signupPhoto?'':'disabled'} onclick="go('appSubmitted')">Submit Application</button></div>`;
 }
 
 function screenAppSubmitted(){
@@ -745,8 +828,13 @@ function screenAppSubmitted(){
       ${ICONS.check}
     </div>
     <h1>Application Submitted!</h1>
-    <p class="muted small">Thanks, ${DRIVER.name.split(' ')[0]}. Your driver application is under review.</p>
-    <div class="card" style="text-align:left;margin-top:22px;">
+    <p class="muted small">We have received your details. Our team will verify your information and you will be notified once your account is approved.</p>
+    <div class="card" style="background:var(--accent-soft);border:none;margin:18px 0;">
+      <p class="tiny muted" style="margin:0;">Your Application Number</p>
+      <p style="font-weight:800;font-size:17px;margin:4px 0 0;color:var(--accent-dark);">${SIGNUP_DL.applicationNumber}</p>
+    </div>
+    <p style="text-align:left;font-weight:800;margin:18px 0 8px;">What happens next?</p>
+    <div class="card" style="text-align:left;">
       <div class="row gap12" style="align-items:flex-start;margin-bottom:16px;">
         <div class="list-ic" style="color:var(--accent)">${ICONS.phoneIc}</div>
         <p class="small" style="margin:0;">You will receive a call from our team to confirm your application.</p>
@@ -761,7 +849,7 @@ function screenAppSubmitted(){
       </div>
     </div>
   </div></div>
-  <div class="screen-pad"><button class="btn btn-primary" onclick="go('home')">Continue to App</button></div>`;
+  <div class="screen-pad"><button class="btn btn-primary" onclick="go('home')">Go to Home</button></div>`;
 }
 
 function screenWelcome(){
