@@ -558,6 +558,7 @@ const PICKUP_CONTACT = { name:'Rajesh Kumar', role:'Manager', phone:'+91 1800 12
 /* ---------------- State ---------------- */
 const initialState = () => ({
   certified:false,
+  isNewUser:true,          // controls what OTP verification leads to — signup (scanDL) vs returning-user home
   screen:'mobile',
   tab:'trips',
   tripsView:'available',
@@ -691,7 +692,11 @@ function screenOtp(){
 }
 function resendOtp(){ set({resendTimer:36}); showToast('OTP resent'); }
 function afterOtp(){
-  if(!S.certified){ go('scanDL'); } else { go('welcome'); }
+  if(S.isNewUser){ go('scanDL'); }
+  else { set({screen:'home', tab:'trips', tripsView:'available', modal:null}); scheduleWelcomeBack(); }
+}
+function scheduleWelcomeBack(){
+  setTimeout(()=>{ if(S.screen==='home' && !S.modal) openModal('welcomeBack'); }, 1000);
 }
 
 function DLCardWireframe(kind){
@@ -852,15 +857,6 @@ function screenAppSubmitted(){
   <div class="screen-pad"><button class="btn btn-primary" onclick="go('home')">Go to Home</button></div>`;
 }
 
-function screenWelcome(){
-  return `
-  <div class="screen-scroll"><div class="screen-pad" style="padding-top:60px;text-align:center;">
-    <div class="go-logo" style="justify-content:center;font-size:28px;margin-bottom:26px;"><span class="g">Go</span>Bhola</div>
-    <h1>Welcome back, ${DRIVER.name.split(' ')[0]}! 👋</h1>
-    <p class="muted small">${S.certified ? "You're all set. Let's get you on the road." : "Your verification is still in progress — you can browse the app while you wait."}</p>
-  </div></div>
-  <div class="screen-pad"><button class="btn btn-primary" onclick="go('home')">Continue</button></div>`;
-}
 
 /* ---------------- Screens: Trips ---------------- */
 function TripCard(trip, mode){
@@ -1413,6 +1409,7 @@ function ModalRoot(){
   const map = {
     certRequired: ModalCertRequired,
     certCelebrate: ModalCertCelebrate,
+    welcomeBack: ModalWelcomeBack,
     tripDetailsAvailable: ModalTripDetails,
     otpStart: ()=>ModalOtp('Verify & start trip','Enter the 6-digit OTP shared by the merchant to confirm and start the trip.','submitOtpStart()'),
     otpLeg: ()=>ModalOtp('Verify arrival','Enter the 6-digit OTP shared by the hub coordinator to confirm handover and continue.','submitOtpLeg()'),
@@ -1468,6 +1465,24 @@ function ModalCertCelebrate(){
     <h1 style="margin-top:6px;">You are officially<br>GoBhola certified!</h1>
     <p class="muted small">Your training has been successfully completed. You can now accept trips and start earning with GoBhola.</p>
     <button class="btn btn-primary" style="margin-top:6px;" onclick="closeModal(); set({screen:'home',tab:'trips',tripsView:'available'})">Start exploring trips</button>
+  </div></div>`;
+}
+
+function ModalWelcomeBack(){
+  return `<div class="overlay"><div class="sheet" style="text-align:center;">
+    <div class="hero-illustration" style="padding:14px 0 4px;background:none;">
+      <svg width="130" height="130" viewBox="0 0 130 130" fill="none">
+        <circle cx="65" cy="65" r="60" fill="var(--accent-soft)"/>
+        <path d="M40 118c1-24 11-36 25-36s24 12 25 36z" fill="var(--accent)"/>
+        <circle cx="65" cy="55" r="19" fill="#D7A66E"/>
+        <path d="M46 51a19 19 0 0 1 38 0c-4-3-10-5-19-5s-15 2-19 5z" fill="#2B2018"/>
+        <path d="M83 78c11-3 17-14 17-25" stroke="#D7A66E" stroke-width="10" stroke-linecap="round" fill="none"/>
+        <circle cx="100" cy="52" r="7.5" fill="#D7A66E"/>
+      </svg>
+    </div>
+    <h1 style="margin-top:2px;">Welcome back to GoBhola!</h1>
+    <p class="muted small">Your account is ready. You can continue from where you left off.</p>
+    <button class="btn btn-primary" style="margin-top:6px;" onclick="closeModal()">Got It</button>
   </div></div>`;
 }
 
@@ -1696,7 +1711,6 @@ function renderScreenInner(){
   if(S.screen==='dlVerify') return screenDlVerify();
   if(S.screen==='reviewInfo') return screenReviewInfo();
   if(S.screen==='appSubmitted') return screenAppSubmitted();
-  if(S.screen==='welcome') return screenWelcome();
   if(S.screen==='home'){
     if(S.tab==='trips'){
       if(S.tripsView==='available') return screenTripsAvailable();
@@ -1733,7 +1747,7 @@ function render(){
 function renderTopbar(){
   const parts = [];
   parts.push(S.certified ? 'Certified driver' : 'Not yet certified');
-  const screenLabels = {mobile:'Login · Mobile Number',otp:'Login · OTP',scanDL:'Login · Scan DL',dlVerify:'Login · DL Verification',reviewInfo:'Login · Review Information',appSubmitted:'Login · Application Submitted',welcome:'Login · Welcome'};
+  const screenLabels = {mobile:'Login · Mobile Number',otp:'Login · OTP',scanDL:'Login · Scan DL',dlVerify:'Login · DL Verification',reviewInfo:'Login · Review Information',appSubmitted:'Login · Application Submitted'};
   if(S.screen!=='home') parts.push(screenLabels[S.screen]||S.screen);
   else {
     parts.push('Tab: ' + S.tab[0].toUpperCase()+S.tab.slice(1));
@@ -1782,15 +1796,26 @@ function renderPanel(){
 
     <div class="panel-section">
       <p class="panel-eyebrow">Onboarding &amp; Login</p>
+      <p class="tiny muted" style="margin:-4px 0 8px;">Verifying OTP as:</p>
+      <div class="seg" style="margin-bottom:10px;">
+        <button class="${S.isNewUser?'active':''}" onclick="set({isNewUser:true})">New User</button>
+        <button class="${!S.isNewUser?'active on':''}" onclick="set({isNewUser:false})">Returning User</button>
+      </div>
       <div class="nav-grid">
         ${NavBtn('Mobile Number', S.screen==='mobile', "go('mobile')")}
         ${NavBtn('Enter OTP', S.screen==='otp', "go('otp')")}
+      </div>
+      <p class="tiny" style="color:#9CA3AF;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin:12px 0 6px;">New-user path</p>
+      <div class="nav-grid">
         ${NavBtn('Scan Licence', S.screen==='scanDL', "go('scanDL')")}
         ${NavBtn('Verifying DL', S.screen==='dlVerify', "go('dlVerify')")}
         ${NavBtn('Review Info', S.screen==='reviewInfo', "go('reviewInfo')")}
         ${NavBtn('App Submitted', S.screen==='appSubmitted', "go('appSubmitted')")}
-        ${NavBtn('Welcome', S.screen==='welcome', "go('welcome')")}
-        ${NavBtn('Enter App →', isHome, "go('home')")}
+      </div>
+      <p class="tiny" style="color:#9CA3AF;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin:12px 0 6px;">Returning-user path</p>
+      <div class="nav-grid">
+        ${NavBtn('Enter App →', isHome, "go('home')", 'Lands straight on Trips · Available')}
+        ${NavBtn('"Welcome back" drawer', S.modal==='welcomeBack', "openModal('welcomeBack')", 'Auto-opens ~1s after OTP for a returning user')}
       </div>
     </div>
 
