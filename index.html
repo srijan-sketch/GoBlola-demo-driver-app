@@ -1822,27 +1822,6 @@ function renderPanel(){
     </div>
 
     <div class="panel-section">
-      <p class="panel-eyebrow">Driver Certification</p>
-      <div class="seg">
-        <button class="${!S.certified?'active':''}" onclick="setCertified(false)">Not Certified</button>
-        <button class="${S.certified?'active on':''}" onclick="setCertified(true)">Certified</button>
-      </div>
-      <div class="state-readout">
-        <b>${S.certified?'✅ Certified driver':'🕓 Verification pending'}</b><br>
-        Gates the Trips accept flow, Earnings data and the Profile badge everywhere in the app.
-      </div>
-      <p class="tiny muted" style="margin:12px 0 6px;">Verification steps checked off (${S.verifySteps} / 3):</p>
-      <div class="nav-grid" style="grid-template-columns:repeat(4,1fr);gap:6px;">
-        ${[0,1,2,3].map(n=>`<button class="nav-btn ${S.verifySteps===n?'active':''}" style="justify-content:center;padding:9px 4px;" onclick="set({verifySteps:${n}})">${n}</button>`).join('')}
-      </div>
-      <p class="panel-hint">Drives the tick marks in the "Complete verification" and "Welcome to GoBhola" drawers below — independent of the Certified toggle.</p>
-      <div class="nav-grid c1" style="margin-top:6px;">
-        ${NavBtn('Certification-complete celebration', S.modal==='certCelebrate', "openModal('certCelebrate')", 'Laurel badge shown the moment a driver gets certified')}
-      </div>
-      <button class="btn-reset" onclick="resetAll()">↺ Reset entire prototype</button>
-    </div>
-
-    <div class="panel-section">
       <p class="panel-eyebrow">Onboarding &amp; Login</p>
       <p class="tiny muted" style="margin:-4px 0 8px;">Verifying OTP as:</p>
       <div class="seg" style="margin-bottom:10px;">
@@ -1867,6 +1846,27 @@ function renderPanel(){
         ${NavBtn('Enter App →', isHome, "go('home')", 'Lands straight on Trips · Available')}
         ${NavBtn('"Welcome back" drawer', S.modal==='welcomeBack', "openModal('welcomeBack')", 'Auto-opens ~1s after OTP for a returning user')}
       </div>
+    </div>
+
+    <div class="panel-section">
+      <p class="panel-eyebrow">Driver Certification</p>
+      <div class="seg">
+        <button class="${!S.certified?'active':''}" onclick="setCertified(false)">Not Certified</button>
+        <button class="${S.certified?'active on':''}" onclick="setCertified(true)">Certified</button>
+      </div>
+      <div class="state-readout">
+        <b>${S.certified?'✅ Certified driver':'🕓 Verification pending'}</b><br>
+        Gates the Trips accept flow, Earnings data and the Profile badge everywhere in the app.
+      </div>
+      <p class="tiny muted" style="margin:12px 0 6px;">Verification steps checked off (${S.verifySteps} / 3):</p>
+      <div class="nav-grid" style="grid-template-columns:repeat(4,1fr);gap:6px;">
+        ${[0,1,2,3].map(n=>`<button class="nav-btn ${S.verifySteps===n?'active':''}" style="justify-content:center;padding:9px 4px;" onclick="set({verifySteps:${n}})">${n}</button>`).join('')}
+      </div>
+      <p class="panel-hint">Drives the tick marks in the "Complete verification" and "Welcome to GoBhola" drawers above — independent of the Certified toggle.</p>
+      <div class="nav-grid c1" style="margin-top:6px;">
+        ${NavBtn('Certification-complete celebration', S.modal==='certCelebrate', "openModal('certCelebrate')", 'Laurel badge shown the moment a driver gets certified')}
+      </div>
+      <button class="btn-reset" onclick="resetAll()">↺ Reset entire prototype</button>
     </div>
 
     <div class="panel-section">
