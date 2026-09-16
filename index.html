@@ -579,6 +579,7 @@ const initialState = () => ({
   dlFront:false,
   dlBack:false,
   signupPhoto:false,
+  verifySteps:0,           // 0-3: how many of the 3 certification steps are checked off
   notifEnabled:true,
   notifFeed: freshNotifFeed(),
   reportType:'Road Block',
@@ -697,6 +698,13 @@ function afterOtp(){
 }
 function scheduleWelcomeBack(){
   setTimeout(()=>{ if(S.screen==='home' && !S.modal) openModal('welcomeBack'); }, 1000);
+}
+function goHomeAfterSignup(){
+  set({screen:'home', tab:'trips', tripsView:'available', modal:null});
+  scheduleWelcomeNew();
+}
+function scheduleWelcomeNew(){
+  setTimeout(()=>{ if(S.screen==='home' && !S.modal) openModal('welcomeNew'); }, 1000);
 }
 
 function DLCardWireframe(kind){
@@ -854,7 +862,7 @@ function screenAppSubmitted(){
       </div>
     </div>
   </div></div>
-  <div class="screen-pad"><button class="btn btn-primary" onclick="go('home')">Go to Home</button></div>`;
+  <div class="screen-pad"><button class="btn btn-primary" onclick="goHomeAfterSignup()">Go to Home</button></div>`;
 }
 
 
@@ -910,20 +918,12 @@ function TripCard(trip, mode){
 }
 
 function screenTripsAvailable(){
-  const gatedByCert = !S.certified;
   return `
   ${AppHeader()}
   <div class="screen-scroll"><div class="screen-pad" style="padding-top:2px;">
     ${TripsTopTabs()}
-    ${gatedByCert ? `
-      <div class="card" style="text-align:center;padding:30px 18px;">
-        <div style="width:64px;height:64px;border-radius:50%;background:#F3F5F8;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;color:#9CA3AF;">${ICONS.lock}</div>
-        <p style="font-weight:800;margin:0 0 6px;">Trips are locked</p>
-        <p class="small muted" style="margin:0 0 16px;">Complete your GoBhola certification to start accepting trips.</p>
-        <button class="btn btn-outline btn-sm" onclick="openModal('certRequired')">See what's needed</button>
-      </div>
-    ` : AVAILABLE_TRIPS.map(t=>`<div style="position:relative;">${TripCard(t,'available')}</div>`).join('') +
-      (AVAILABLE_TRIPS.some(t=>t.locked) ? `<div style="text-align:center;margin-top:4px;"><span class="pill dark" style="cursor:pointer;" onclick="document.getElementById('phoneScreen').querySelector('.screen-scroll').scrollTo({top:9999,behavior:'smooth'})"><span style="display:inline-flex;transform:rotate(90deg);">${ICONS.chevron}</span> Next available trip</span></div>` : '')}
+    ${AVAILABLE_TRIPS.map(t=>`<div style="position:relative;">${TripCard(t,'available')}</div>`).join('')}
+    ${AVAILABLE_TRIPS.some(t=>t.locked && S.certified) ? `<div style="text-align:center;margin-top:4px;"><span class="pill dark" style="cursor:pointer;" onclick="document.getElementById('phoneScreen').querySelector('.screen-scroll').scrollTo({top:9999,behavior:'smooth'})"><span style="display:inline-flex;transform:rotate(90deg);">${ICONS.chevron}</span> Next available trip</span></div>` : ''}
   </div></div>
   ${TabBar()}`;
 }
@@ -1410,6 +1410,7 @@ function ModalRoot(){
     certRequired: ModalCertRequired,
     certCelebrate: ModalCertCelebrate,
     welcomeBack: ModalWelcomeBack,
+    welcomeNew: ModalWelcomeNew,
     tripDetailsAvailable: ModalTripDetails,
     otpStart: ()=>ModalOtp('Verify & start trip','Enter the 6-digit OTP shared by the merchant to confirm and start the trip.','submitOtpStart()'),
     otpLeg: ()=>ModalOtp('Verify arrival','Enter the 6-digit OTP shared by the hub coordinator to confirm handover and continue.','submitOtpLeg()'),
@@ -1425,6 +1426,24 @@ function ModalRoot(){
   return map[S.modal] ? map[S.modal]() : '';
 }
 
+const VERIFY_STEPS_TEXT = [
+  'You will receive a call from our team to confirm your application.',
+  'You need to attend physical training at a GoBhola training center.',
+  'If you complete the training successfully, you will get full access to this app.',
+];
+function VerificationSteps(current){
+  return `<div class="stack" style="margin:14px 0 6px;">
+    ${VERIFY_STEPS_TEXT.map((t,i)=>{
+      const done = i < current;
+      return `<div class="row gap12" style="align-items:flex-start;">
+        <div style="width:26px;height:26px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;background:${done?'var(--accent)':'var(--chip-bg)'};color:${done?'#fff':'var(--chip-fg)'};">
+          ${done ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>` : i+1}
+        </div>
+        <p class="small" style="margin:2px 0 0;">${t}</p>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
 function ModalCertRequired(){
   return `<div class="overlay"><div class="sheet">
     <div class="hero-illustration" style="padding:18px 0;">
@@ -1439,12 +1458,28 @@ function ModalCertRequired(){
     </div>
     <h1 style="text-align:center;">Complete verification<br>to accept trips</h1>
     <p class="muted small" style="text-align:center;">Once your application is verified and you complete the training, you will be able to accept trips and start earning.</p>
-    <div class="stack" style="margin:16px 0 6px;">
-      <div class="row gap12" style="align-items:flex-start;"><div style="color:var(--accent)">${ICONS.phoneIc}</div><p class="small" style="margin:0;">You will receive a call from our team to confirm your application.</p></div>
-      <div class="row gap12" style="align-items:flex-start;"><div style="color:var(--accent)">${ICONS.building}</div><p class="small" style="margin:0;">You need to attend physical training at a GoBhola training center.</p></div>
-      <div class="row gap12" style="align-items:flex-start;"><div style="color:var(--accent)">${ICONS.check}</div><p class="small" style="margin:0;">If you complete the training successfully, you will get full access to this app.</p></div>
-    </div>
+    ${VerificationSteps(S.verifySteps)}
     <button class="btn btn-primary" style="margin-top:10px;" onclick="closeModal()">Got It</button>
+  </div></div>`;
+}
+function ModalWelcomeNew(){
+  return `<div class="overlay"><div class="sheet">
+    <div class="hero-illustration" style="padding:14px 0 4px;background:none;">
+      <svg width="130" height="130" viewBox="0 0 130 130" fill="none">
+        <circle cx="65" cy="65" r="60" fill="var(--accent-soft)"/>
+        <path d="M40 118c1-24 11-36 25-36s24 12 25 36z" fill="var(--accent)"/>
+        <circle cx="65" cy="55" r="19" fill="#D7A66E"/>
+        <path d="M46 51a19 19 0 0 1 38 0c-4-3-10-5-19-5s-15 2-19 5z" fill="#2B2018"/>
+        <path d="M83 78c11-3 17-14 17-25" stroke="#D7A66E" stroke-width="10" stroke-linecap="round" fill="none"/>
+        <circle cx="100" cy="52" r="7.5" fill="#D7A66E"/>
+        <circle cx="100" cy="18" r="11" fill="var(--accent-dark)"/><path d="M95 18l3 3 6-6" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h1 style="text-align:center;">Welcome to GoBhola!</h1>
+    <p class="muted small" style="text-align:center;">Thanks for submitting your application. You are one step closer to the road.</p>
+    <p style="font-weight:800;margin:14px 0 0;">What happens next?</p>
+    ${VerificationSteps(S.verifySteps)}
+    <button class="btn btn-primary" style="margin-top:4px;" onclick="closeModal()">Got It</button>
   </div></div>`;
 }
 
@@ -1788,7 +1823,12 @@ function renderPanel(){
         <b>${S.certified?'✅ Certified driver':'🕓 Verification pending'}</b><br>
         Gates the Trips accept flow, Earnings data and the Profile badge everywhere in the app.
       </div>
-      <div class="nav-grid c1" style="margin-top:8px;">
+      <p class="tiny muted" style="margin:12px 0 6px;">Verification steps checked off (${S.verifySteps} / 3):</p>
+      <div class="nav-grid" style="grid-template-columns:repeat(4,1fr);gap:6px;">
+        ${[0,1,2,3].map(n=>`<button class="nav-btn ${S.verifySteps===n?'active':''}" style="justify-content:center;padding:9px 4px;" onclick="set({verifySteps:${n}})">${n}</button>`).join('')}
+      </div>
+      <p class="panel-hint">Drives the tick marks in the "Complete verification" and "Welcome to GoBhola" drawers below — independent of the Certified toggle.</p>
+      <div class="nav-grid c1" style="margin-top:6px;">
         ${NavBtn('Certification-complete celebration', S.modal==='certCelebrate', "openModal('certCelebrate')", 'Laurel badge shown the moment a driver gets certified')}
       </div>
       <button class="btn-reset" onclick="resetAll()">↺ Reset entire prototype</button>
@@ -1811,6 +1851,8 @@ function renderPanel(){
         ${NavBtn('Verifying DL', S.screen==='dlVerify', "go('dlVerify')")}
         ${NavBtn('Review Info', S.screen==='reviewInfo', "go('reviewInfo')")}
         ${NavBtn('App Submitted', S.screen==='appSubmitted', "go('appSubmitted')")}
+        ${NavBtn('Lands on Home (locked)', isHome && !S.certified && S.modal===null, "goHomeAfterSignup(); set({modal:null})", 'Trips/Available, all locked')}
+        ${NavBtn('"Welcome to GoBhola" drawer', S.modal==='welcomeNew', "openModal('welcomeNew')", 'Auto-opens ~1s after landing on Home post-signup')}
       </div>
       <p class="tiny" style="color:#9CA3AF;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin:12px 0 6px;">Returning-user path</p>
       <div class="nav-grid">
