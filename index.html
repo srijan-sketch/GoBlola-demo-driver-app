@@ -492,23 +492,25 @@ const SIGNUP_DL = {
   applicationNumber:'GB-1234567890',
 };
 
+const WINDOW_LOCK_MSG = 'Not available right now. You can accept trip after your 14-hour driving window ends.';
 const AVAILABLE_TRIPS = [
   // Type 1: Client pickup -> Hub (first-mile)
   { id:'TRIP-456874256', earn:3079, km:234, eta:'7h 24m', ratePerKm:18, reportingBy:'12/09/2026, 12:30 PM', handoverBy:'12/09/2026, 07:30 PM', handoverLabel:'Handover by',
     pickup:{name:'Amazon Transportation Services', addr:'Plot No. 5, Sector 63, Noida, Uttar Pradesh 201301', icon:'truckTab'},
     drop:{name:'GoBhola Logistics Hub', addr:'Bhiwadi, Thane, Maharashtra 421302', icon:'warehouse', color:'amber'},
-    cargo:'General Goods', vehicle:'32 ft Container', locked:false },
+    cargo:'General Goods', vehicle:'32 ft Container',
+    contact:{role:'Pickup Contact', name:'Subhankar Roy', title:'Manager', phone:'+91 90123 45678'} },
   // Type 2: Hub -> Hub (mid-mile transfer)
   { id:'TRIP-772104459', earn:3650, km:180, eta:'6h 15m', ratePerKm:20, reportingBy:'12/09/2026, 12:30 PM', handoverBy:'12/09/2026, 07:30 PM', handoverLabel:'Handover by',
     pickup:{name:'GoBhola Logistics Hub', addr:'Bhiwadi, Thane, Maharashtra 421302', icon:'warehouse'},
     drop:{name:'GoBhola Logistics Hub', addr:'Kundli, Sonipat, Haryana 131028', icon:'warehouse', color:'amber'},
-    cargo:'Container Transfer', vehicle:'32 ft Container', locked:false },
+    cargo:'Container Transfer', vehicle:'32 ft Container' },
   // Type 3: Hub -> Final delivery (last-mile)
   { id:'TRIP-991023841', earn:4250, km:150, eta:'5h 10m', ratePerKm:28, reportingBy:'12/09/2026, 12:30 PM', handoverBy:'12/09/2026, 07:30 PM', handoverLabel:'Delivery by',
     pickup:{name:'GoBhola Logistics Hub', addr:'Kundli, Sonipat, Haryana 131028', icon:'warehouse'},
     drop:{name:'Reliance Retail Distribution Centre', addr:'NH-48, Manesar, Gurugram, Haryana 122051', icon:'pin', color:'red'},
-    cargo:'FMCG Pallets', vehicle:'22 ft Truck', locked:true,
-    lockMsg:'Not available right now. You can accept trip after your 14-hour driving window ends.' },
+    cargo:'FMCG Pallets', vehicle:'22 ft Truck',
+    contact:{role:'Delivery Contact', name:'Avilash Ghosh', title:'Manager', phone:'+91 98765 43210'} },
 ];
 
 const LEGS = [
@@ -881,8 +883,11 @@ function screenAppSubmitted(){
 /* ---------------- Screens: Trips ---------------- */
 function TripCard(trip, mode){
   // mode: 'available' | 'upcoming'
-  const locked = trip.locked && !S.certified ? false : trip.locked; // locked-by-window only relevant once certified
   const gatedByCert = !S.certified;
+  const hasActiveTrip = S.tripPhase !== 'none';
+  const isThisAccepted = hasActiveTrip && trip.id === S.activeTripId;
+  // Once a trip is accepted, every OTHER trip is blocked for the driver's 14-hour driving window.
+  const windowLocked = !gatedByCert && hasActiveTrip && !isThisAccepted;
   return `
   <div class="card" style="padding:0;overflow:hidden;">
     <div style="background:var(--accent-soft);padding:14px 16px;">
@@ -913,18 +918,18 @@ function TripCard(trip, mode){
       ${ mode==='available' ? (
         gatedByCert
         ? `<button class="btn btn-ghost" style="color:#9CA3AF;" onclick="openModal('certRequired')">${ICONS.lock} Accept Trip</button>`
-        : locked
-          ? `<div style="position:relative;">
-               <button class="btn btn-ghost" disabled style="color:#C2C8D2;">Accept Trip</button>
-             </div>`
+        : windowLocked
+          ? `<button class="btn btn-ghost" disabled style="color:#C2C8D2;">Accept Trip</button>`
+        : isThisAccepted
+          ? `<div class="row gap10"><button class="btn btn-outline btn-sm" style="flex:1;" onclick="openDetail('${trip.id}')">View Details</button><button class="btn btn-primary btn-sm" style="flex:1;background:var(--accent-soft);color:var(--accent-dark);" disabled>Trip Accepted</button></div>`
           : `<div class="row gap10"><button class="btn btn-outline btn-sm" style="flex:1;" onclick="openDetail('${trip.id}')">View Details</button><button class="btn btn-primary btn-sm" style="flex:1;" onclick="acceptTrip('${trip.id}')">Accept Trip</button></div>`
       ) : `<div class="row gap10"><button class="btn btn-outline btn-sm" style="flex:1;" onclick="openDetail('${trip.id}')">View Details</button><button class="btn btn-primary btn-sm" style="flex:1;" onclick="goToActive()">Trip Accepted →</button></div>`}
     </div>
-    ${ mode==='available' && locked && !gatedByCert ? `
+    ${ mode==='available' && windowLocked ? `
       <div style="position:absolute;inset:0;background:rgba(255,255,255,.82);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;border-radius:16px;">
         <div style="width:40px;height:40px;border-radius:50%;background:#E7E9ED;display:flex;align-items:center;justify-content:center;color:#6B7280;margin-bottom:10px;">${ICONS.lock}</div>
         <p style="font-weight:800;margin:0 0 4px;">Not available right now.</p>
-        <p class="tiny muted" style="margin:0;max-width:220px;">${trip.lockMsg}</p>
+        <p class="tiny muted" style="margin:0;max-width:220px;">${WINDOW_LOCK_MSG}</p>
       </div>` : ``}
   </div>`;
 }
@@ -935,7 +940,7 @@ function screenTripsAvailable(){
   <div class="screen-scroll"><div class="screen-pad" style="padding-top:2px;">
     ${TripsTopTabs()}
     ${AVAILABLE_TRIPS.map(t=>`<div style="position:relative;">${TripCard(t,'available')}</div>`).join('')}
-    ${AVAILABLE_TRIPS.some(t=>t.locked && S.certified) ? `<div style="text-align:center;margin-top:4px;"><span class="pill dark" style="cursor:pointer;" onclick="document.getElementById('phoneScreen').querySelector('.screen-scroll').scrollTo({top:9999,behavior:'smooth'})"><span style="display:inline-flex;transform:rotate(90deg);">${ICONS.chevron}</span> Next available trip</span></div>` : ''}
+    ${S.certified && S.tripPhase!=='none' ? `<div style="text-align:center;margin-top:4px;"><span class="pill dark" style="cursor:pointer;" onclick="document.getElementById('phoneScreen').querySelector('.screen-scroll').scrollTo({top:9999,behavior:'smooth'})"><span style="display:inline-flex;transform:rotate(90deg);">${ICONS.chevron}</span> Next available trip</span></div>` : ''}
   </div></div>
   ${TabBar()}`;
 }
@@ -1549,8 +1554,10 @@ function ModalWelcomeBack(){
 
 function ModalTripDetails(){
   const trip = AVAILABLE_TRIPS.find(t=>t.id===S.detailTripId) || AVAILABLE_TRIPS[0];
+  const hasActiveTrip = S.tripPhase !== 'none';
+  const isThisAccepted = hasActiveTrip && trip.id === S.activeTripId;
+  const windowLocked = S.certified && hasActiveTrip && !isThisAccepted;
   const canCancel = ['accepted','preActive'].includes(S.tripPhase) && trip.id===S.activeTripId;
-  const showAccept = S.tripPhase!=='accepted' || trip.id!==S.activeTripId;
   return `<div class="overlay"><div class="sheet">
     <div class="sheet-grabber"></div>
     <h2 style="text-align:center;font-size:16.5px;margin:0 0 14px;">Trip Details</h2>
@@ -1569,6 +1576,14 @@ function ModalTripDetails(){
       <div class="card" style="flex:1;text-align:center;"><p class="tiny muted" style="margin:0;">${ICONS.route} Distance</p><p style="font-weight:800;margin:4px 0 0;">${trip.km} KM</p></div>
       <div class="card" style="flex:1;text-align:center;"><p class="tiny muted" style="margin:0;">${ICONS.clock} Est. Time</p><p style="font-weight:800;margin:4px 0 0;">${trip.eta}</p></div>
     </div>
+    ${trip.contact ? `
+    <div class="card" style="margin-bottom:10px;">
+      <p class="tiny muted" style="margin:0 0 8px;font-weight:700;">${trip.contact.role.toUpperCase()}</p>
+      <div class="row between">
+        <div class="row gap10"><div style="color:var(--accent)">${ICONS.phoneIc}</div><p style="margin:0;font-weight:700;font-size:13px;">${trip.contact.name} • ${trip.contact.title}</p></div>
+        <button class="btn btn-dark btn-sm" style="width:auto;" onclick="showToast('Calling ${trip.contact.name}…')">Call</button>
+      </div>
+    </div>` : ''}
     <div class="card" style="margin-bottom:10px;">
       <p class="tiny muted" style="margin:0 0 8px;font-weight:700;">CARGO &amp; VEHICLE DETAILS</p>
       <div class="row between small"><span>${trip.cargo}</span><span>${trip.vehicle}</span></div>
@@ -1579,8 +1594,9 @@ function ModalTripDetails(){
     </div>
     ${ !S.certified ? `<button class="btn btn-ghost" onclick="closeModal(); openModal('certRequired')">${ICONS.lock} Accept Trip</button>`
       : canCancel ? `<div class="slide-confirm danger" onclick="cancelTripConfirmed()"><div class="fill" style="width:100%"></div><div class="knob">›</div><div class="label">Slide to cancel trip</div></div>`
-      : showAccept ? `<button class="btn btn-primary" onclick="acceptTrip('${trip.id}')">Accept Trip</button>`
-      : `<button class="btn btn-outline" disabled>Cancellation not available</button>` }
+      : windowLocked ? `<button class="btn btn-outline" disabled>${WINDOW_LOCK_MSG}</button>`
+      : isThisAccepted ? `<button class="btn btn-outline" disabled>Cancellation not available</button>`
+      : `<button class="btn btn-primary" onclick="acceptTrip('${trip.id}')">Accept Trip</button>` }
   </div></div>`;
 }
 
