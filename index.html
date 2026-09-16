@@ -1831,15 +1831,18 @@ function ModalCancelTrip(){
 
 function ModalEndConfirm(){
   const trip = AVAILABLE_TRIPS.find(t=>t.id===S.activeTripId);
-  const contact = (trip && trip.contact) || {name:'Avilash Ghosh', title:'Manager', phone:'+91 98765 43210'};
+  // Only the final-delivery trip's own Delivery Contact belongs here — a trip's Pickup
+  // Contact (client pickup trips) has nothing to do with ending the trip at a hub.
+  const contact = trip && trip.contact && trip.contact.role === 'Delivery Contact' ? trip.contact : null;
   return `<div class="overlay" onclick="if(event.target===this) closeModal()"><div class="sheet">
     <div class="sheet-grabber"></div>
     <h2 style="text-align:center;font-size:16.5px;">End Trip?</h2>
     <p class="small muted" style="text-align:center;">Please confirm you've reached the destination and completed the handover to mark this trip as completed.</p>
+    ${contact ? `
     <div class="card row between" style="margin:14px 0 18px;">
       <div><p style="font-weight:700;margin:0;font-size:13px;">${contact.name} • ${contact.title}</p><p class="small muted" style="margin:2px 0 0;">${contact.phone}</p></div>
       <button class="btn btn-dark btn-sm" style="width:auto;" onclick="showToast('Calling ${contact.name}…')">${ICONS.phoneIc} Call</button>
-    </div>
+    </div>` : `<div style="margin-top:14px;"></div>`}
     <div class="slide-confirm" onclick="beginFinalChecklist()"><div class="fill" style="width:100%"></div><div class="knob">›</div><div class="label">Slide to end trip</div></div>
   </div></div>`;
 }
