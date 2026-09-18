@@ -684,6 +684,7 @@ const initialState = () => ({
   //      -> ending -> checklistEnd -> tripEnded -> none
   tripPhase:'none',
   returning:false,         // true once the driver taps "Start Trip" on a "Return to pickup location" notification mid-trip
+  gpsEnabled:true,         // false force-shows a blocking "Turn on your GPS" drawer over the whole app
   legIndex:0,
   activeTripId: AVAILABLE_TRIPS[0].id,
   startStep:0,
@@ -2148,6 +2149,15 @@ function renderScreenInner(){
 }
 
 function render(){
+  if(!S.gpsEnabled){
+    document.getElementById('phoneScreen').innerHTML = `
+      <div class="phone-notch"></div>
+      ${GpsBlockOverlay()}
+    `;
+    renderPanel();
+    renderTopbar();
+    return;
+  }
   const overlay = S.notificationsOpen ? screenNotifications() : (S.fullPage ? FULL_PAGE_MAP[S.fullPage]() : null);
   document.getElementById('phoneScreen').innerHTML = `
     <div class="phone-notch"></div>
@@ -2159,6 +2169,41 @@ function render(){
   renderPanel();
   renderTopbar();
   paintSignaturePad();
+}
+function setGpsEnabled(v){ set({gpsEnabled:v}); }
+function GpsBlockOverlay(){
+  return `<div style="position:absolute;inset:0;background:#0b0c10;display:flex;flex-direction:column;justify-content:flex-end;z-index:100;">
+    <div class="sheet" style="border-radius:24px 24px 0 0;text-align:center;padding-top:28px;">
+      ${GpsIllustration()}
+      <h1 style="margin:18px 0 8px;">Turn on your GPS</h1>
+      <p class="muted small">We need your location to show nearby trips, navigate during trips and keep you safe on the road.</p>
+      <button class="btn btn-primary" style="margin-top:16px;" onclick="setGpsEnabled(true)">Turn On GPS</button>
+    </div>
+  </div>`;
+}
+function GpsIllustration(){
+  return `<svg width="180" height="140" viewBox="0 0 200 156" style="margin:0 auto;display:block;">
+    <polygon points="20,70 90,40 180,60 170,120 100,150 15,125" fill="#EAF6EE"/>
+    <polygon points="20,70 90,40 180,60 170,120 100,150 15,125" fill="none" stroke="#D5E9DC" stroke-width="1"/>
+    <rect x="35" y="80" width="130" height="14" rx="3" fill="#DCEEE3" transform="rotate(-6 100 87)"/>
+    <rect x="45" y="105" width="110" height="12" rx="3" fill="#DCEEE3" transform="rotate(-4 100 111)"/>
+    <g><rect x="43" y="98" width="4" height="10" fill="#8A5A32"/><circle cx="45" cy="94" r="10" fill="#5FAE6E"/></g>
+    <g><rect x="150" y="80" width="4" height="10" fill="#8A5A32"/><circle cx="152" cy="76" r="9" fill="#5FAE6E"/></g>
+    <g><rect x="140" y="118" width="4" height="10" fill="#8A5A32"/><circle cx="142" cy="114" r="8" fill="#5FAE6E"/></g>
+    <g transform="translate(30,95)">
+      <rect x="0" y="10" width="26" height="18" rx="2" fill="#fff" stroke="#C7CCD4"/>
+      <rect x="4" y="13" width="10" height="8" rx="1" fill="#8FD7EA"/>
+      <rect x="26" y="4" width="30" height="24" rx="2" fill="#22A559"/>
+      <circle cx="10" cy="30" r="5" fill="#22262E"/>
+      <circle cx="46" cy="30" r="5" fill="#22262E"/>
+    </g>
+    <g transform="translate(95,10)">
+      <path d="M30,0 C46,0 58,12 58,28 C58,48 30,74 30,74 C30,74 2,48 2,28 C2,12 14,0 30,0 Z" fill="#0E9F6E"/>
+      <circle cx="30" cy="27" r="12" fill="#fff"/>
+      <line x1="66" y1="10" x2="76" y2="4" stroke="#0E9F6E" stroke-width="4" stroke-linecap="round"/>
+      <line x1="70" y1="22" x2="82" y2="20" stroke="#0E9F6E" stroke-width="4" stroke-linecap="round"/>
+    </g>
+  </svg>`;
 }
 
 function renderTopbar(){
@@ -2245,6 +2290,18 @@ function renderPanel(){
       <p class="panel-hint">Drives the tick marks in the "Complete verification" and "Welcome to GoBhola" drawers above — independent of the Certified toggle.</p>
       <div class="nav-grid c1" style="margin-top:6px;">
         ${NavBtn('Certification-complete celebration', S.modal==='certCelebrate', "openModal('certCelebrate')", 'Laurel badge shown the moment a driver gets certified')}
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <p class="panel-eyebrow">Device State</p>
+      <div class="seg">
+        <button class="${S.gpsEnabled?'active on':''}" onclick="setGpsEnabled(true)">GPS On</button>
+        <button class="${!S.gpsEnabled?'active':''}" onclick="setGpsEnabled(false)">GPS Off</button>
+      </div>
+      <div class="state-readout">
+        <b>${S.gpsEnabled?'📍 Location available':'🚫 Location disabled'}</b><br>
+        Turning GPS off force-shows a full-screen, non-dismissible "Turn on your GPS" drawer over the entire app until it's turned back on.
       </div>
     </div>
 
