@@ -579,7 +579,7 @@ const TRIP_HISTORY = [
 const NOTIFS = [
   {icon:'bell', bg:'#EAF1FE', fg:'#3B82F6', t:'Your trip starts soon', body:'Your pickup from Sector 62, Noida is scheduled for 1:00 PM. Please reach the location on time.', time:'12:30PM'},
   {icon:'pin', bg:'var(--accent-soft)', fg:'var(--accent-dark)', t:'New trips are available', body:'Your rest window has ended. You can now accept new trips from the Available section.', time:'10:15 AM'},
-  {icon:'user', bg:'var(--warning-soft)', fg:'var(--warning)', t:'Return to pickup location', body:'GoBhola has requested you to return the truck to the pickup location.', time:'10:15 AM', action:'Start Trip'},
+  {icon:'pin', bg:'var(--warning-soft)', fg:'var(--warning)', t:'Return to pickup location', body:'GoBhola has requested you to return the truck to the pickup location.', time:'10:15 AM', action:'Start Trip', started:false},
   {icon:'closeCircle', bg:'var(--danger-soft)', fg:'var(--danger)', t:'Trip cancelled', body:'TRIP-456874256 has been cancelled by you. You can accept another available trip.', time:'10:15 AM'},
   {icon:'wallet', bg:'var(--accent-soft)', fg:'var(--accent-dark)', t:'Earnings credited', body:'₹4,850 has been added to your earnings. Keep up the good work!', time:'10:15 AM'},
   {icon:'cap', bg:'#EAF1FE', fg:'#3B82F6', t:'Training scheduled', body:'Your physical training is scheduled on 20 Sep 2025 at GoBhola Training Center.', time:'10:15 AM'},
@@ -683,6 +683,7 @@ const initialState = () => ({
   //      -> (per hub leg: legEndChecklist -> legStartChecklist -> inProgress)
   //      -> ending -> checklistEnd -> tripEnded -> none
   tripPhase:'none',
+  returning:false,         // true once the driver taps "Start Trip" on a "Return to pickup location" notification mid-trip
   legIndex:0,
   activeTripId: AVAILABLE_TRIPS[0].id,
   startStep:0,
@@ -1116,6 +1117,21 @@ function RouteTrack(from, fromFg, kmLeft, to, toFg){
     <div><p style="margin:0;font-weight:700;font-size:13.5px;">${to.name}</p><p class="tiny muted" style="margin:1px 0 0;">${to.addr}</p></div>
   </div>`;
 }
+function ReturnRouteTrack(pickup, drop){
+  const Stop = (stop, muted) => `
+    <div class="route-ic" style="color:${muted?'#C4CBD6':'var(--accent-dark)'};">${ICONS[stop.icon]}</div>
+    <div><p class="${muted?'muted':''}" style="margin:0;font-weight:700;font-size:13.5px;">${stop.name}</p><p class="tiny muted" style="margin:1px 0 0;">${stop.addr}</p></div>
+  `;
+  const Line = () => `<div class="route-line-wrap"><div class="route-line"></div></div><div></div>`;
+  return `<div class="divider" style="margin:0 0 14px;"></div>
+  <div class="route-grid" style="margin-bottom:16px;">
+    ${Stop(pickup, false)}
+    ${Line()}
+    ${Stop(drop, true)}
+    ${Line()}
+    ${Stop(pickup, false)}
+  </div>`;
+}
 function SosReportContactRow(){
   return `<div class="row" style="justify-content:space-around;margin-bottom:16px;">
       <div style="text-align:center;cursor:pointer;" onclick="openFullPage('sos')">
@@ -1240,11 +1256,13 @@ function screenTripsActive(){
     <div class="card">
       <div class="row between">
         <p style="margin:0;font-size:13.5px;"><span class="muted">Trip ID</span> <b style="font-size:14.5px;">${S.activeTripId}</b></p>
-        <span class="pill green">In Progress</span>
+        <span class="pill green">${S.returning ? 'Returning' : 'In Progress'}</span>
       </div>
-      ${RouteTrack(leg.from, 'var(--accent-dark)', leg.kmLeft, leg.to, dropIconColor(leg.to))}
+      ${S.returning
+        ? ReturnRouteTrack(trip.pickup, trip.drop)
+        : RouteTrack(leg.from, 'var(--accent-dark)', leg.kmLeft, leg.to, dropIconColor(leg.to))}
       <button class="btn btn-ghost" style="margin-bottom:10px;">Navigate on Google Map</button>
-      <button class="btn btn-primary" onclick="reachDestination()">I've Reached the Destination</button>
+      ${S.returning ? '' : `<button class="btn btn-primary" onclick="reachDestination()">I've Reached the Destination</button>`}
     </div>
   </div></div>
   ${TabBar()}`;
@@ -1408,7 +1426,7 @@ function acceptTrip(id){
   // Each available trip is its own single-leg job — legIndex ties it to the matching
   // Start-to-Hub / Hub-to-Hub / Hub-to-Delivery route in LEGS (same order as AVAILABLE_TRIPS).
   const legIndex = AVAILABLE_TRIPS.findIndex(t=>t.id===id);
-  set({modal:null, activeTripId:id, legIndex, tripPhase:'accepted', tripsView:'upcoming', cancelWindowPassed:false});
+  set({modal:null, activeTripId:id, legIndex, tripPhase:'accepted', tripsView:'upcoming', cancelWindowPassed:false, returning:false});
   showToast('Trip added to your upcoming list.');
 }
 function cancelTripConfirmed(){
@@ -1429,8 +1447,13 @@ function beginFinalChecklist(){
   set({modal:null, tripPhase:'checklistEnd', endKind:'final', endStep:0, declareEnd:false, deliveryOtp:'', signatureStrokes:[], signatureRedo:[]});
 }
 function finishTripFlow(){
-  set({modal:null, tripPhase:'none', tripsView:'available', legIndex:0, startStep:0, endStep:0});
+  set({modal:null, tripPhase:'none', tripsView:'available', legIndex:0, startStep:0, endStep:0, returning:false});
   showToast('Great work! Trip marked as completed.');
+}
+function startReturnTrip(index){
+  S.notifFeed[index].started = true;
+  set({returning:true});
+  showToast('Trip updated — return the truck to the pickup location.');
 }
 
 /* ---------------- Screens: Earnings ---------------- */
@@ -2052,11 +2075,11 @@ function screenNotifications(){
   ${BackHeader('Notifications', 'closeNotifications()')}
   <div class="screen-scroll"><div class="screen-pad">
     <div class="stack" style="margin-top:6px;">
-    ${S.notifFeed.map(n=>NotifCard(n)).join('')}
+    ${S.notifFeed.map((n,i)=>NotifCard(n,i)).join('')}
     </div>
   </div></div>`;
 }
-function NotifCard(n){
+function NotifCard(n, i){
   return `<div class="card row gap10" style="align-items:flex-start;">
     <div style="flex:0 0 auto;text-align:center;width:44px;">
       <div style="width:38px;height:38px;border-radius:50%;background:${n.bg};color:${n.fg};display:flex;align-items:center;justify-content:center;margin:0 auto;">${ICONS[n.icon]}</div>
@@ -2065,7 +2088,9 @@ function NotifCard(n){
     <div style="flex:1;min-width:0;">
       <div class="row between" style="gap:8px;align-items:flex-start;">
         <p style="font-weight:700;margin:0;font-size:13.5px;">${n.t}</p>
-        ${n.action ? `<button class="btn btn-dark btn-sm" style="width:auto;flex:0 0 auto;padding:8px 12px;" onclick="closeModal(); showToast('Starting trip to pickup location…')">${n.action}</button>` : ''}
+        ${n.action ? (n.started
+          ? `<button class="btn btn-sm" style="width:auto;flex:0 0 auto;padding:8px 12px;background:var(--accent-soft);color:var(--accent-dark);" disabled>Trip Started</button>`
+          : `<button class="btn btn-dark btn-sm" style="width:auto;flex:0 0 auto;padding:8px 12px;" onclick="startReturnTrip(${i})">${n.action}</button>`) : ''}
       </div>
       <p class="small muted" style="margin:4px 0 0;">${n.body}</p>
       ${n.track ? TrackRow(n.track) : ''}
@@ -2274,6 +2299,8 @@ function renderPanel(){
         ${NavBtn('Contact — Hub-to-hub leg', S.fullPage==='contact' && S.legIndex===1, "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'inProgress',legIndex:1}); openFullPage('contact')", 'No Trip Contacts card')}
         ${NavBtn('Contact — Delivery leg', S.fullPage==='contact' && S.legIndex===2, "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'inProgress',legIndex:2}); openFullPage('contact')", 'Shows Delivery Contact card')}
         ${NavBtn('Notifications', S.notificationsOpen, "openNotifications()")}
+        ${NavBtn('"Return to pickup" notification', S.notificationsOpen && !S.returning, "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'inProgress',legIndex:0,activeTripId:AVAILABLE_TRIPS[0].id,returning:false,modal:null}); S.notifFeed.forEach(n=>{if(n.action)n.started=false;}); openNotifications()", 'Tap Start Trip inside to see the Active card update')}
+        ${NavBtn('Active card — Returning to pickup', S.returning, "set({screen:'home',tab:'trips',tripsView:'active',tripPhase:'inProgress',legIndex:0,activeTripId:AVAILABLE_TRIPS[0].id,returning:true,modal:null,notificationsOpen:false})", 'Skips straight to the updated card')}
       </div>
     </div>
 
